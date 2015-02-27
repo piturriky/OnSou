@@ -4,13 +4,14 @@
     tools:context="com.udl.lluis.onsou.MapsActivityMain"
     android:name="com.google.android.gms.maps.SupportMapFragment" >
 
-    <LinearLayout android:id="@+id/email_login_form" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:orientation="vertical">
+    <RelativeLayout android:id="@+id/email_login_form" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="horizontal">
 
         <Button android:id="@+id/sign_in_button" style="?android:textAppearanceSmall"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="16dp" android:text="@string/action_sign_in"
-            android:textStyle="bold" />
+            android:textStyle="bold" android:layout_alignParentBottom="true"/>
 
-    </LinearLayout>
+    </RelativeLayout>
+    <!--http://stackoverflow.com/questions/8726984/grouped-horizontal-button-group-in-android-->
 </fragment>
