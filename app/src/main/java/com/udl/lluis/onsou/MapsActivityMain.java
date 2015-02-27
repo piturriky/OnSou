@@ -1,0 +1,116 @@
+package com.udl.lluis.onsou;
+
+import android.content.Context;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.support.v4.app.FragmentActivity;
+import android.os.Bundle;
+import android.widget.Toast;
+
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+public class MapsActivityMain extends FragmentActivity {
+
+    private LocationManager locManager;
+    private LocationListener locListener;
+    private MapsActivityMain mActivity = this;
+
+    private GoogleMap mMap; // Might be null if Google Play services APK is not available.
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_maps_main);
+
+        //Obtenemos una referencia al LocationManager
+        locManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+
+        locListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                setUpMap();
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+                Toast.makeText(mActivity, "Provider Status: " + status, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+                Toast.makeText(mActivity, "Provider ON", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+                Toast.makeText(mActivity, "Provider OFF", Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        setUpMapIfNeeded();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setUpMapIfNeeded();
+    }
+
+    private void setUpMapIfNeeded() {
+        // Do a null check to confirm that we have not already instantiated the map.
+        if (mMap == null) {
+            // Try to obtain the map from the SupportMapFragment.
+            mMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
+                    .getMap();
+
+            // Check if we were successful in obtaining the map.
+            if (mMap != null) {
+                setUpMap();
+                //Nos registramos para recibir actualizaciones de la posición
+                locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 30000, 0, locListener);
+
+//              mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+//                @Override
+//                public void onMapClick(LatLng latLng) {
+//                    mMap.addMarker(new MarkerOptions().position(new LatLng(latLng.latitude, latLng.longitude)).title("Marker - SimpleClick"));
+//                }
+//              });
+                mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+                    @Override
+                    public void onMapLongClick(LatLng latLng) {
+                        mMap.addMarker(new MarkerOptions().position(new LatLng(latLng.latitude, latLng.longitude)).title("Marker - LongClick"));
+                    }
+                });
+
+                // Set 3D buildings
+                mMap.setBuildingsEnabled(true);
+            }
+        }
+    }
+
+    private void setUpMap() {
+        //Mostramos la última posición conocida
+        //mMap.addMarker(new MarkerOptions().position(new LatLng(loc.getLatitude(), loc.getLongitude())).title("You"));
+
+        // Enable MyLocation Layer of Google Map
+        mMap.setMyLocationEnabled(true);
+
+        // Obtenemos la última posición conocida
+        Location loc = locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        LatLng pos = new LatLng(loc.getLatitude(), loc.getLongitude());
+        // set map type
+        mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+
+        // Show the current location in Google Map
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(pos));
+
+        // Zoom in the Google Map
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(14));
+        //mMap.addMarker(new MarkerOptions().position(pos).title("You are here!").snippet("Consider yourself located"));
+    }
+}
