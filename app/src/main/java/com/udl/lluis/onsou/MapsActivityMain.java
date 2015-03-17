@@ -1,11 +1,14 @@
 package com.udl.lluis.onsou;
 
+import android.app.DialogFragment;
 import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -29,28 +32,7 @@ public class MapsActivityMain extends FragmentActivity {
 
         //Obtenemos una referencia al LocationManager
         locManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-
-        locListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                setUpMap();
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-                Toast.makeText(mActivity, "Provider Status: " + status, Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onProviderEnabled(String provider) {
-                Toast.makeText(mActivity, "Provider ON", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onProviderDisabled(String provider) {
-                Toast.makeText(mActivity, "Provider OFF", Toast.LENGTH_SHORT).show();
-            }
-        };
+        locListener = buildLocationListener();
 
         setUpMapIfNeeded();
     }
@@ -93,6 +75,28 @@ public class MapsActivityMain extends FragmentActivity {
         }
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_maps_activity, menu);
+        return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.MnuOpc1:
+                Toast.makeText(mActivity, "Opcion 1 pulsada!", Toast.LENGTH_SHORT).show();
+                return true;
+            case R.id.MnuOpc2:
+                Toast.makeText(mActivity, "Opcion 2 pulsada!", Toast.LENGTH_SHORT).show();
+                return true;
+            case R.id.MnuOpc3:
+                Toast.makeText(mActivity, "Opcion 3 pulsada!", Toast.LENGTH_SHORT).show();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
     private void setUpMap() {
         //Mostramos la última posición conocida
         //mMap.addMarker(new MarkerOptions().position(new LatLng(loc.getLatitude(), loc.getLongitude())).title("You"));
@@ -112,5 +116,30 @@ public class MapsActivityMain extends FragmentActivity {
         // Zoom in the Google Map
         mMap.animateCamera(CameraUpdateFactory.zoomTo(14));
         //mMap.addMarker(new MarkerOptions().position(pos).title("You are here!").snippet("Consider yourself located"));
+    }
+
+    private LocationListener buildLocationListener(){
+        LocationListener lcl = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                setUpMap();
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+                Toast.makeText(mActivity, "Provider Status: " + status, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+                Toast.makeText(mActivity, "Provider ON", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+                Toast.makeText(mActivity, "Provider OFF", Toast.LENGTH_SHORT).show();
+            }
+        };
+        return lcl;
     }
 }
