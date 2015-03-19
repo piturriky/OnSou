@@ -30,6 +30,8 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 
+import fragments.UserMapFragment;
+
 
 /**
  * A login screen that offers login via email/password.
@@ -326,7 +328,7 @@ public class LoginActivity extends Activity implements LoaderCallbacks<Cursor> {
 
             if (success) {
                 Intent intent = null;
-                intent = new Intent(loginActivity,MapsActivityMain.class);
+                intent = new Intent(loginActivity, MainActivity.class);
                 startActivity(intent);
                 finish();
             } else {
