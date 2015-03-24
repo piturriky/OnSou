@@ -30,8 +30,6 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 
-import fragments.UserMapFragment;
-
 
 /**
  * A login screen that offers login via email/password.

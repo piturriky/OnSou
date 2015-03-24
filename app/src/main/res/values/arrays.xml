@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="check_box_manage_friends_fragment">check_box_manage_friends_fragment
+        <item>Show in map</item>
+    </string-array>
+</resources>

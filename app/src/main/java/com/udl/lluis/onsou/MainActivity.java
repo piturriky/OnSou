@@ -1,31 +1,43 @@
 package com.udl.lluis.onsou;
 
-import java.util.Locale;
-
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.DialogFragment;
-import android.support.v4.view.MenuItemCompat;
-import android.support.v7.app.ActionBarActivity;
-import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentPagerAdapter;
-import android.os.Bundle;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.SearchView;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Toast;
 
-import fragments.AddDeviceDialogFragment;
-import fragments.FriendsFragment;
-import fragments.UserMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.udl.lluis.onsou.entities.Device;
+import com.udl.lluis.onsou.entities.Group;
+import com.udl.lluis.onsou.fragments.AddDeviceDialogFragment;
+import com.udl.lluis.onsou.fragments.AddGroupDialogFragment;
+import com.udl.lluis.onsou.fragments.FriendsFragment;
+import com.udl.lluis.onsou.fragments.GroupsFragment;
+import com.udl.lluis.onsou.fragments.ManageFriendsDialogFragment;
+import com.udl.lluis.onsou.fragments.UserMapFragment;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 
-public class MainActivity extends ActionBarActivity implements ActionBar.TabListener, AddDeviceDialogFragment.AddDeviceDialogListener {
+public class MainActivity extends ActionBarActivity implements ActionBar.TabListener, FragmentsCommunicationInterface {
 
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
@@ -36,19 +48,29 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
      * {@link android.support.v4.app.FragmentStatePagerAdapter}.
      */
     SectionsPagerAdapter mSectionsPagerAdapter;
+    private HashMap<Integer,Fragment> fragmentsMap = new HashMap<Integer, Fragment>();
 
     /**
      * The {@link ViewPager} that will host the section contents.
      */
-    ViewPager mViewPager;
+    private ViewPager mViewPager;
 
     private ActionBar actionBar;
     private MainActivity act = this;
+    private Menu optionsMenu;
+
+    // Devices
+    private Map<Long,Device> devicesMap;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if(savedInstanceState != null){
+            fragmentsMap = (HashMap)savedInstanceState.getSerializable("map");
+        }
 
         // Set up the action bar.
         actionBar = getSupportActionBar();
@@ -84,13 +106,78 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                             .setTabListener(this));
         }
 
+
+        devicesMap = new HashMap<Long,Device>();
+        getDevicesFromServer();
+        //showDevicesInMap();
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable("map",fragmentsMap);
+    }
+
+    // Send petition to server getDevices()
+    //      this return available devices depending params configured
+    private void getDevicesFromServer(){
+
+        devicesMap.clear();
+
+        // FILL devicesMap from download data
+        for(Device d : getSimulatedDevices()){
+            devicesMap.put(d.getId(),d);
+        }
+    }
+
+    private List<Device> getSimulatedDevices(){
+        List<Device> list = new ArrayList<Device>(){{
+            add(new Device(new Long(1000),"Simulation Friend 1",new LatLng(41.69,0.64),true,true));
+            add(new Device(new Long(2000),"Simulation No Friend 2",new LatLng(41.96,0.65),false,true));
+            add(new Device(new Long(3000),"Simulation Friend 3",new LatLng(41.716,0.66),true,true));
+            add(new Device(new Long(4000),"Simulation No Online Friend 4",new LatLng(41.616,0.68),true,false));
+        }};
+        return list;
+    }
+
+    private List <Group> getSimulatedGroups(){
+        final List devices = getSimulatedDevices();
+
+        Group g1 = new Group("Simulated Group 1", new Color());
+
+        List<Group> list = new ArrayList<Group>(){{
+            add(new Group("Simulated Group 1", new Color()));
+        }};
+        return list;
+    }
+
+    public void showDialogFragment(int type, Bundle bundle){
+        switch (type){
+            case 1:
+                AddDeviceDialogFragment d = new AddDeviceDialogFragment();
+                d.show(getSupportFragmentManager(), "AddDeviceDialogFragment");
+                break;
+            case 2:
+                ManageFriendsDialogFragment f = new ManageFriendsDialogFragment();
+                f.setArguments(bundle);
+                f.show(getSupportFragmentManager(), "ManageFriendsDialogFragment");
+                break;
+            case 3:
+                AddGroupDialogFragment a = new AddGroupDialogFragment();
+                a.setArguments(bundle);
+                a.show(getSupportFragmentManager(),"AddGroupDialogFragment");
+                break;
+            case 4: // To enable GPS
+                buildAlertMessageNoGps();
+                break;
+        }
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////// METHODS OF ActionBar and menu
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        this.optionsMenu = menu;
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         MenuItem searchItem = menu.findItem(R.id.action_search);
@@ -108,19 +195,50 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         switch(item.getItemId()){
             case R.id.action_settings: // SETTINGS OPTION
-                Toast.makeText(this, "Toast settings", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "Toast settings", Toast.LENGTH_SHORT).show();
+                Intent intent = null;
+                intent = new Intent(this, SettingsActivity.class);
+                startActivity(intent);
+                //finish();
                 return true;
             case  R.id.add_device: // ADD DEVICE BUTTON
-                AddDeviceDialogFragment d = new AddDeviceDialogFragment();
-                d.show(getSupportFragmentManager(), "AddDeviceDialogFragment");
+                showDialogFragment(1,null);
                 return true;
-            case R.id.action_fullscreen:
+            case R.id.airport_menuRefresh:
+                setRefreshActionButtonState(true);
+                // Execute some code after 2 seconds have passed
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    public void run() {
+                        setRefreshActionButtonState(false);
+                    }
+                }, 2000);
+                // Complete with your code
+                return true;
+            case  R.id.add_group: // ADD GROUP
+                showDialogFragment(3,null);
+                return true;
+            /*case R.id.action_fullscreen:
                 actionBar.setDisplayShowHomeEnabled(false);
                 actionBar.setDisplayShowTitleEnabled(false);
-                return true;
+                return true;*/
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void setRefreshActionButtonState(final boolean refreshing) {
+        if (optionsMenu != null) {
+            final MenuItem refreshItem = optionsMenu
+                    .findItem(R.id.airport_menuRefresh);
+            if (refreshItem != null) {
+                if (refreshing) {
+                    refreshItem.setActionView(R.layout.actionbar_indeterminate_progress);
+                } else {
+                    refreshItem.setActionView(null);
+                }
+            }
+        }
     }
 
 
@@ -147,6 +265,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
      */
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
+        //private Map<Integer,Fragment> fragmentsMap = new HashMap<Integer, Fragment>();
+
         public SectionsPagerAdapter(FragmentManager fm) {
             super(fm);
         }
@@ -156,12 +276,20 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
             switch (position){
+                //UserMapFragment userMapFragment = (UserMapFragment)((SectionsPagerAdapter)mViewPager.getAdapter()).getFragment(0);
+                //showToast(userMapFragment.getTest());
                 case 0:
-                    return UserMapFragment.newInstance(position + 1);
+                    UserMapFragment userMapFragment = UserMapFragment.newInstance(position + 1);
+                    fragmentsMap.put(position,userMapFragment);
+                    return userMapFragment;
                 case 1:
-                    return FriendsFragment.newInstance(position + 1);
+                    FriendsFragment friendsFragment = FriendsFragment.newInstance(position + 1);
+                    fragmentsMap.put(position,friendsFragment);
+                    return friendsFragment;
                 case 2:
-                    return PlaceholderFragment.newInstance(position + 1);
+                    GroupsFragment groupsFragment = GroupsFragment.newInstance(position + 1);
+                    fragmentsMap.put(position,groupsFragment);
+                    return groupsFragment;
             }
             return null;
         }
@@ -185,12 +313,49 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             }
             return null;
         }
+
     }
 
 
+    //Dialog to enable GPS
+    private void buildAlertMessageNoGps() {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Your GPS seems to be disabled, do you want to enable it?")
+                .setCancelable(false)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        dialog.cancel();
+                    }
+                });
+        final AlertDialog alert = builder.create();
+        alert.show();
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////// METHODS OF AddDeviceDialogListener
+    /////////////////////////// METHODS OF FragmentsCommunicationInterface
+    @Override
+    public Map getDevices() {
+        return devicesMap;
+    }
+
+    public void changeToFragment(int position){
+        if(position < 0 && position > 2) return;
+        mViewPager.setCurrentItem(position);
+    }
+
+/*    public Fragment getFragment(int position){
+        return ((SectionsPagerAdapter)mViewPager.getAdapter()).getFragment(position);
+    }*/
+
+    public Fragment getFragment(int key){
+        return fragmentsMap.get(key);
+    }
+
     @Override
     public void onDialogPositiveClick(DialogFragment dialog) {
 
@@ -204,38 +369,11 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
 
 
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-     public static class PlaceholderFragment extends Fragment {
-     /**
-     * The fragment argument representing the section number for this
-     * fragment.
-     */
-     private static final String ARG_SECTION_NUMBER = "section_number";
 
-     /**
-     * Returns a new instance of this fragment for the given section
-     * number.
-     */
-     public static PlaceholderFragment newInstance(int sectionNumber) {
-     PlaceholderFragment fragment = new PlaceholderFragment();
-     Bundle args = new Bundle();
-     args.putInt(ARG_SECTION_NUMBER, sectionNumber);
-     fragment.setArguments(args);
-     return fragment;
-     }
 
-     public PlaceholderFragment() {
-     }
-
-     @Override
-     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-     Bundle savedInstanceState) {
-     View rootView = inflater.inflate(R.layout.friends_fragment, container, false);
-     return rootView;
-     }
-     }
+    private void showToast(CharSequence text){
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+    }
 
 }
 

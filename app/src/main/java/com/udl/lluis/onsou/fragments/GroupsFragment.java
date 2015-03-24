@@ -1,4 +1,4 @@
-package fragments;
+package com.udl.lluis.onsou.fragments;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -14,13 +14,15 @@ import android.widget.ExpandableListAdapter;
 import android.widget.ExpandableListView;
 import android.widget.TextView;
 
-import com.udl.lluis.onsou.MainActivity;
 import com.udl.lluis.onsou.R;
 
 /**
  * Created by Lluís on 19/03/2015.
  */
-public class FriendsFragment extends Fragment {
+/**
+ * A placeholder fragment containing a simple view.
+ */
+public class GroupsFragment extends Fragment {
     /**
      * The fragment argument representing the section number for this
      * fragment.
@@ -32,33 +34,30 @@ public class FriendsFragment extends Fragment {
      * Returns a new instance of this fragment for the given section
      * number.
      */
-    public static FriendsFragment newInstance(int sectionNumber) {
-        FriendsFragment fragment = new FriendsFragment();
+    public static GroupsFragment newInstance(int sectionNumber) {
+        GroupsFragment fragment = new GroupsFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_SECTION_NUMBER, sectionNumber);
         fragment.setArguments(args);
         return fragment;
     }
 
-    public FriendsFragment() {
+    public GroupsFragment() {
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
-
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.friends_fragment, container, false);
+        View rootView = inflater.inflate(R.layout.groups_fragment, container, false);
 
 
         ExpandableListAdapter mAdapter;
-        ExpandableListView epView = (ExpandableListView) rootView.findViewById(R.id.expandableListView);
+        ExpandableListView epView = (ExpandableListView) rootView.findViewById(R.id.expandableListViewGroups);
         mAdapter = new MyExpandableListAdapter();
         epView.setAdapter(mAdapter);
 
@@ -99,7 +98,6 @@ public class FriendsFragment extends Fragment {
     }
 
 
-
     /**
      * A simple adapter which maintains an ArrayList of photo resource Ids. Each
      * photo is displayed as an image. This adapter supports clearing the list
@@ -109,8 +107,8 @@ public class FriendsFragment extends Fragment {
     public class MyExpandableListAdapter extends BaseExpandableListAdapter {
         // Sample data set. children[i] contains the children (String[]) for
         // groups[i].
-        private String[] groups = {"On-Line", "Off-Line"};
-        private String[][] children = { { "Child1" },{ "Child2" }, { "Child3" },{ "Child4" }, { "Child5" } };
+        private String[] groups = {"Family", "Town Friends"};
+        private String[][] children = { { "Mom" },{ "Jonny" }, { "Child3" },{ "Child4" }, { "Child5" } };
 
         public Object getChild(int groupPosition, int childPosition) {
             return children[groupPosition][childPosition];
@@ -131,7 +129,7 @@ public class FriendsFragment extends Fragment {
             return i;
         }
 
-        public TextView getGenericView() {
+        public TextView getGenericView(int groupPosition, int childPosition) {
             // Layout parameters for the ExpandableListView
             AbsListView.LayoutParams lp = new AbsListView.LayoutParams(
                     ViewGroup.LayoutParams.FILL_PARENT, 64);
@@ -140,8 +138,29 @@ public class FriendsFragment extends Fragment {
             textView.setLayoutParams(lp);
             // Center the text vertically
             textView.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
-            textView.setTextColor(getResources().getColor(R.color.red));
-            textView.setTextSize(20);
+
+            switch (groupPosition){
+                case 0:
+                    if(childPosition == Integer.MIN_VALUE){
+                        textView.setTextColor(getResources().getColor(R.color.darkblue));
+                        textView.setTextSize(20);
+                        //textView.setBackgroundColor();
+                    }else{
+                        textView.setTextColor(getResources().getColor(R.color.green));
+                        textView.setTextSize(15);
+                    }
+                    break;
+                case 1:
+                    if(childPosition == Integer.MIN_VALUE){
+                        textView.setTextColor(getResources().getColor(R.color.darkorange));
+                        textView.setTextSize(20);
+                    }else{
+                        //textView.setTextColor(getResources().getColor(R.color.darkorange));
+                        textView.setTextSize(15);
+                    }
+                    break;
+            }
+
             // Set the text starting position
             textView.setPadding(50, 0, 0, 0);
             return textView;
@@ -149,7 +168,7 @@ public class FriendsFragment extends Fragment {
 
         public View getChildView(int groupPosition, int childPosition,
                                  boolean isLastChild, View convertView, ViewGroup parent) {
-            TextView textView = getGenericView();
+            TextView textView = getGenericView(groupPosition, childPosition);
             textView.setText(getChild(groupPosition, childPosition).toString()+" group: "+groupPosition+" child: " + childPosition);
             return textView;
         }
@@ -168,7 +187,7 @@ public class FriendsFragment extends Fragment {
 
         public View getGroupView(int groupPosition, boolean isExpanded,
                                  View convertView, ViewGroup parent) {
-            TextView textView = getGenericView();
+            TextView textView = getGenericView(groupPosition,Integer.MIN_VALUE);
             textView.setText(getGroup(groupPosition).toString()+" group: "+groupPosition);
             return textView;
         }

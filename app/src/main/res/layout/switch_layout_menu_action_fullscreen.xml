@@ -8,6 +8,10 @@ android:orientation="horizontal" >
     android:id="@+id/switchForActionBar"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:title="@string/action_fullscreen" />
+    android:text="@string/action_fullscreen"
+    android:checked="true"
+    android:clickable="true"
+    android:enabled="true"
+    android:focusable="true" />
 
 </RelativeLayout>

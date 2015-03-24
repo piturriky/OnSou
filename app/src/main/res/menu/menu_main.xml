@@ -1,26 +1,37 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools" tools:context="com.udl.lluis.onsou.MainActivity">
-    <item android:id="@+id/action_settings"
-        android:title="@string/action_settings"
-        android:orderInCategory="100"
-        app:showAsAction="never" />
+
     <item android:id="@+id/action_search"
         android:title="@string/action_search"
         android:icon="@drawable/ic_action_search"
-        app:showAsAction="ifRoom|collapseActionView"
+        app:showAsAction="always|collapseActionView"
         app:actionViewClass="android.support.v7.widget.SearchView" />
-    <item android:id="@+id/action_fullscreen"
-        android:title=""
+    <!--<item android:id="@+id/action_fullscreen"
+        android:title="@string/action_fullscreen"
         android:orderInCategory="100"
         app:showAsAction="never"
-        android:actionLayout="@layout/switch_layout_menu_action_fullscreen"/>
-    <!--<item android:id="@+id/action_example"
-        android:title="@string/app_name"
-        app:showAsAction="withText|ifRoom" />-->
+        android:actionLayout="@layout/switch_layout_menu_action_fullscreen"/>-->
+    <item android:id="@+id/airport_menuRefresh"
+        android:icon="@drawable/ic_action_refresh"
+        android:title="@string/action_refresh"
+        android:alphabeticShortcut="r"
+        android:orderInCategory="100"
+        app:showAsAction="always" />
     <item android:id="@+id/add_device"
         android:title="@string/add_device"
         android:icon="@drawable/ic_action_name"
         android:orderInCategory="100"
-        app:showAsAction="never|withText|ifRoom" />
+        app:showAsAction="ifRoom" />
+
+
+    <item android:id="@+id/add_group"
+        android:title="@string/add_group"
+        android:icon="@drawable/ic_action_new_atachment"
+        app:showAsAction="never" />
+    <item android:id="@+id/action_settings"
+        android:title="@string/action_settings"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+
 </menu>
