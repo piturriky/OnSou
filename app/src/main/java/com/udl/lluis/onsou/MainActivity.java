@@ -60,7 +60,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     private Menu optionsMenu;
 
     // Devices
-    private Map<Long,Device> devicesMap;
+    private HashMap<Long,Device> devicesMap;
 
 
     @Override
@@ -69,7 +69,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         setContentView(R.layout.activity_main);
 
         if(savedInstanceState != null){
-            fragmentsMap = (HashMap)savedInstanceState.getSerializable("map");
+            devicesMap = (HashMap) savedInstanceState.getSerializable("devicesMap");
+            fragmentsMap = (HashMap)savedInstanceState.getSerializable("fragmentMap");
         }
 
         // Set up the action bar.
@@ -115,7 +116,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putSerializable("map",fragmentsMap);
+        outState.putSerializable("devicesMap",devicesMap);
+        outState.putSerializable("fragmentsMap",fragmentsMap);
     }
 
     // Send petition to server getDevices()
