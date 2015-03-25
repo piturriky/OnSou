@@ -165,7 +165,7 @@ public class UserMapFragment extends Fragment {
             mMap.setMyLocationEnabled(true);
 
             // set map type
-            String myListPreference = myPreference.getString("map_type_list", "Normal");
+            String myListPreference = myPreference.getString("map_type_list", "1");
             mMap.setMapType(Integer.parseInt(myListPreference));
 
             // Set 3D buildings

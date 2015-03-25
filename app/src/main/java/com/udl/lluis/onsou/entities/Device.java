@@ -17,14 +17,34 @@ public class Device implements Serializable {
     private boolean isFriend;
     private boolean isOnline;
 
-    private LatLng position;
+    //private LatLng position;
+    private double latitude;
+    private double longitude;
 
     public Device(long id, String name, LatLng position, boolean isFriend, boolean isOnline) {
         this.id = id;
         this.name = name;
-        this.position = position;
+        //this.position = position;
+        this.latitude = position.latitude;
+        this.longitude = position.longitude;
         this.isFriend = isFriend;
         this.isOnline = isOnline;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
     }
 
     public long getId() {
@@ -33,14 +53,6 @@ public class Device implements Serializable {
 
     public String getName() {
         return name;
-    }
-
-    public LatLng getPosition() {
-        return position;
-    }
-
-    public void setLocation(LatLng position) {
-        this.position = position;
     }
 
     public boolean isFriend() {
