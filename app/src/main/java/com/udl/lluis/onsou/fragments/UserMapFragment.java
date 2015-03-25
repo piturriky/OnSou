@@ -27,6 +27,7 @@ import com.udl.lluis.onsou.FragmentsCommunicationInterface;
 import com.udl.lluis.onsou.R;
 import com.udl.lluis.onsou.entities.Device;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +36,7 @@ import java.util.Map;
 /**
  * Created by Lluís on 17/03/2015.
  */
-public class UserMapFragment extends Fragment {
+public class UserMapFragment extends Fragment implements Serializable {
     /**
      * The fragment argument representing the section number for this
      * fragment.
@@ -165,7 +166,7 @@ public class UserMapFragment extends Fragment {
             mMap.setMyLocationEnabled(true);
 
             // set map type
-            String myListPreference = myPreference.getString("map_type_list", "Normal");
+            String myListPreference = myPreference.getString("map_type_list", "1");
             mMap.setMapType(Integer.parseInt(myListPreference));
 
             // Set 3D buildings
