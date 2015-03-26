@@ -11,6 +11,7 @@ import java.util.Map;
  */
 public interface FragmentsCommunicationInterface {
     public Map getDevices();
+    public void startProcessGetDevices();
     public void changeToFragment(int position);
     public Fragment getFragment(int position);
     public void showDialogFragment(int type, Bundle bundle);

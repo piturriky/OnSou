@@ -16,6 +16,7 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.SearchView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -66,11 +67,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.e("------------>", "ACTIVITY ONCREATE");
         setContentView(R.layout.activity_main);
 
         if(savedInstanceState != null){
             devicesMap = (HashMap) savedInstanceState.getSerializable("devicesMap");
-            fragmentsMap = (HashMap)savedInstanceState.getSerializable("fragmentMap");
+            //fragmentsMap = (HashMap)savedInstanceState.getSerializable("fragmentMap");
         }
 
         // Set up the action bar.
@@ -116,8 +118,15 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
+        Log.e("------------>", "ACTIVITY ONSAVEINSTANCESTATE");
         outState.putSerializable("devicesMap",devicesMap);
-        outState.putSerializable("fragmentsMap",fragmentsMap);
+        outState.putSerializable("fragmentsMap", fragmentsMap);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.e("------------>", "ACTIVITY ONRESUME");
     }
 
     // Send petition to server getDevices()
@@ -343,6 +352,13 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     @Override
     public Map getDevices() {
         return devicesMap;
+    }
+
+    public void startProcessGetDevices(){
+        // every X seconds getDevicesFromServer
+        getDevicesFromServer();
+
+        ((UserMapFragment) getFragment(0)).showDevicesInMap(devicesMap);
     }
 
     public void changeToFragment(int position){

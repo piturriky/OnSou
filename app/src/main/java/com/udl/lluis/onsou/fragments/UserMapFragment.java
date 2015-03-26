@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -54,13 +55,14 @@ public class UserMapFragment extends Fragment implements Serializable {
     private LocationManager locManager;
     private LocationListener locListener;
 
-    private Map<Long,Marker> deviceMarkers;
+    private HashMap<Long,Marker> deviceMarkers;
 
     /**
      * Returns a new instance of this fragment for the given section
      * number.
      */
     public static UserMapFragment newInstance(int sectionNumber) {
+        Log.e("------------>", "FRAGMENT NEW INSTANCE");
         UserMapFragment fragment = new UserMapFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_SECTION_NUMBER, sectionNumber);
@@ -74,7 +76,7 @@ public class UserMapFragment extends Fragment implements Serializable {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        Log.e("------------>", "FRAGMENT ON CREATE");
         setRetainInstance(true);
 
         myPreference = PreferenceManager.getDefaultSharedPreferences(getActivity());
@@ -115,7 +117,7 @@ public class UserMapFragment extends Fragment implements Serializable {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
+        Log.e("------------>", "FRAGMENT ON CREATE VIEW");
         View inflatedView = inflater.inflate(R.layout.map_view_fragment, container, false);
         mapView = (MapView) inflatedView.findViewById(R.id.mapview);
         mapView.onCreate(savedInstanceState);
@@ -131,7 +133,9 @@ public class UserMapFragment extends Fragment implements Serializable {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        showDevicesInMap(mCallback.getDevices());
+        Log.e("------------>", "FRAGMENT ONACTIVITYCREATED");
+        //showDevicesInMap(mCallback.getDevices());
+        mCallback.startProcessGetDevices();
     }
 
     @Override
@@ -141,6 +145,7 @@ public class UserMapFragment extends Fragment implements Serializable {
 
     @Override
     public void onResume() {
+        Log.e("------------>", "FRAGMENT ONRESUME");
         super.onResume();
     }
 
@@ -247,7 +252,7 @@ public class UserMapFragment extends Fragment implements Serializable {
     }
 
     public void showDevicesInMap(Map devices){
-
+        Log.e("------------>", "SHOW DEVICES IN MAP");
         /*Drawable dd = getResources().getDrawable(R.drawable.ic_action_person);
         // Get the color of the icon depending on system state
         int iconColor = android.graphics.Color.BLACK;
@@ -273,7 +278,15 @@ public class UserMapFragment extends Fragment implements Serializable {
                         .snippet(d.getPosition().latitude + " :: " + d.getPosition().longitude);
                 if(d.isFriend())marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_action_person_blue));
                 else marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_action_person_grey));
-                deviceMarkers.put(d.getId(),mMap.addMarker(marker));
+                if(deviceMarkers.containsKey(d.getId())){
+                    deviceMarkers.get(d.getId()).setPosition(d.getPosition());
+                }else{
+                    deviceMarkers.put(d.getId(),mMap.addMarker(marker));
+                }
+            }else{
+                if(deviceMarkers.containsKey(d.getId())){
+                    deviceMarkers.get(d.getId()).remove();
+                }
             }
         }
     }

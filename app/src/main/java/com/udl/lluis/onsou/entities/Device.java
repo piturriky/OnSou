@@ -1,7 +1,5 @@
 package com.udl.lluis.onsou.entities;
 
-import android.location.Location;
-
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.Serializable;
@@ -31,20 +29,8 @@ public class Device implements Serializable {
         this.isOnline = isOnline;
     }
 
-    public double getLatitude() {
-        return latitude;
-    }
-
-    public double getLongitude() {
-        return longitude;
-    }
-
-    public void setLatitude(double latitude) {
-        this.latitude = latitude;
-    }
-
-    public void setLongitude(double longitude) {
-        this.longitude = longitude;
+    public LatLng getPosition(){
+        return new LatLng(this.latitude,this.longitude);
     }
 
     public long getId() {
