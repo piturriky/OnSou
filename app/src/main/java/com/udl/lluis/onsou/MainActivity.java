@@ -120,7 +120,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         super.onSaveInstanceState(outState);
         Log.e("------------>", "ACTIVITY ONSAVEINSTANCESTATE");
         outState.putSerializable("devicesMap",devicesMap);
-        outState.putSerializable("fragmentsMap", fragmentsMap);
+//        outState.putSerializable("fragmentsMap", fragmentsMap);
     }
 
     @Override
@@ -372,6 +372,9 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     public Fragment getFragment(int key){
         return fragmentsMap.get(key);
+    }
+    public void setFragment(Fragment fragment, int position){
+        fragmentsMap.put(position,fragment);
     }
 
     @Override

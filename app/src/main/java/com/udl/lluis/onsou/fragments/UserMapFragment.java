@@ -57,13 +57,15 @@ public class UserMapFragment extends Fragment implements Serializable {
 
     private HashMap<Long,Marker> deviceMarkers;
 
+    private static UserMapFragment fragment;
+
     /**
      * Returns a new instance of this fragment for the given section
      * number.
      */
     public static UserMapFragment newInstance(int sectionNumber) {
         Log.e("------------>", "FRAGMENT NEW INSTANCE");
-        UserMapFragment fragment = new UserMapFragment();
+        fragment = new UserMapFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_SECTION_NUMBER, sectionNumber);
         fragment.setArguments(args);
@@ -135,6 +137,7 @@ public class UserMapFragment extends Fragment implements Serializable {
         super.onActivityCreated(savedInstanceState);
         Log.e("------------>", "FRAGMENT ONACTIVITYCREATED");
         //showDevicesInMap(mCallback.getDevices());
+        if(mCallback.getFragment(0)==null)mCallback.setFragment(fragment,0);
         mCallback.startProcessGetDevices();
     }
 
