@@ -201,7 +201,13 @@ public class UserMapFragment extends Fragment implements Serializable {
                     centerMapOnPosition(myLatlon);
                 }
             }
-
+            for(Marker m : deviceMarkers.values()){
+                mMap.addMarker(new MarkerOptions()
+                        .position(m.getPosition())
+                        .title(m.getTitle())
+                        .snippet(m.getSnippet()));
+                deviceMarkers.put
+            }
         }
     }
 
