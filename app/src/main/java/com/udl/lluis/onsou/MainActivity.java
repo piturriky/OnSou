@@ -1,9 +1,18 @@
 package com.udl.lluis.onsou;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.AbstractCursor;
+import android.database.Cursor;
 import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.DialogFragment;
@@ -13,9 +22,11 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.SearchView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -31,8 +42,10 @@ import com.udl.lluis.onsou.fragments.GroupsFragment;
 import com.udl.lluis.onsou.fragments.ManageFriendsDialogFragment;
 import com.udl.lluis.onsou.fragments.UserMapFragment;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -56,22 +69,29 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
      */
     private ViewPager mViewPager;
 
-    private ActionBar actionBar;
     private MainActivity act = this;
+    private static Context context;
+
+    private ActionBar actionBar;
     private Menu optionsMenu;
 
+    private LocationManager locManager;
+    private LocationListener locListener;
+
+
     // Devices
-    private HashMap<Long,Device> devicesMap;
+    private static HashMap<Long,Device> devices;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        context = getApplicationContext();
         Log.e("------------>", "ACTIVITY ONCREATE");
         setContentView(R.layout.activity_main);
 
         if(savedInstanceState != null){
-            devicesMap = (HashMap) savedInstanceState.getSerializable("devicesMap");
+            devices = (HashMap) savedInstanceState.getSerializable("devicesMap");
             //fragmentsMap = (HashMap)savedInstanceState.getSerializable("fragmentMap");
         }
 
@@ -110,22 +130,53 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
 
 
-        devicesMap = new HashMap<Long,Device>();
+
+        //Obtenemos una referencia al LocationManager
+        locManager = (LocationManager)this.getSystemService(Context.LOCATION_SERVICE);
+
+        locListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                // Send to server new location
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+                showToast("Provider " + provider + " Status: " + status);
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+                showToast( "Provider "+ provider +" ON");
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+                showToast("Provider "+ provider +" OFF");
+            }
+        };
+
+        if ( !locManager.isProviderEnabled( LocationManager.GPS_PROVIDER ) ) {
+            showDialogFragment(4, null);
+        }
+
+        devices = new HashMap<Long,Device>();
         getDevicesFromServer();
-        //showDevicesInMap();
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         Log.e("------------>", "ACTIVITY ONSAVEINSTANCESTATE");
-        outState.putSerializable("devicesMap",devicesMap);
+        outState.putSerializable("devicesMap",devices);
 //        outState.putSerializable("fragmentsMap", fragmentsMap);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        //Nos registramos para recibir actualizaciones de la posición
+        locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, locListener);
         Log.e("------------>", "ACTIVITY ONRESUME");
     }
 
@@ -133,11 +184,11 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     //      this return available devices depending params configured
     private void getDevicesFromServer(){
 
-        devicesMap.clear();
+        devices.clear();
 
         // FILL devicesMap from download data
         for(Device d : getSimulatedDevices()){
-            devicesMap.put(d.getId(),d);
+            devices.put(d.getId(),d);
         }
     }
 
@@ -184,6 +235,19 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
     }
 
+    // Retorna la posició del usuari
+    public LatLng getDeviceLocation(){
+        if(locManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+            // Obtenemos la última posición conocida
+            Location loc = locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if(loc != null){
+                return new LatLng(loc.getLatitude(), loc.getLongitude());
+            }
+        }
+        showToast("Provider" + LocationManager.GPS_PROVIDER + " Disabled");
+        return null;
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////// METHODS OF ActionBar and menu
     @Override
@@ -192,9 +256,172 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         MenuItem searchItem = menu.findItem(R.id.action_search);
-        SearchView searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
+        final SearchView searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
+        searchView.setSuggestionsAdapter(new SearchSuggestionsAdapter(this));
+        searchView.setOnSuggestionListener(new SearchView.OnSuggestionListener()
+        {
+            @Override
+            public boolean onSuggestionClick(int position)
+            {
+                Toast.makeText(MainActivity.this, "Position: " + position, Toast.LENGTH_SHORT).show();
+                searchView.clearFocus();
+                return true;
+            }
+
+            @Override
+            public boolean onSuggestionSelect(int position)
+            {
+                return false;
+            }
+        });
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener()
+        {
+            @Override
+            public boolean onQueryTextSubmit(String query)
+            {
+                Toast.makeText(MainActivity.this, query, Toast.LENGTH_SHORT).show();
+                searchView.clearFocus();
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText)
+            {
+                return false;
+            }
+        });
+        /*searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                new CallGeocoderTask().execute(s);
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                return false;
+            }
+        });*/
         return true;
     }
+     private static ArrayList<String> test(String s){
+         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+         ArrayList<String> list = new ArrayList<>();
+         try {
+            for(Address a : geocoder.getFromLocationName(s,10)){
+                list.add(a.getAddressLine(1));
+            }
+         } catch (IOException e) {
+             e.printStackTrace();
+         }
+         return list;
+     }
+
+    public static class SearchSuggestionsAdapter extends SimpleCursorAdapter{
+        private static final String[] mFields  = { "_id", "result" };
+        private static final String[] mVisible = { "result" };
+        private static final int[]    mViewIds = { android.R.id.text1 };
+        public SearchSuggestionsAdapter(Context context)
+        {
+            super(context, android.R.layout.simple_list_item_1, null, mVisible, mViewIds, 0);
+        }
+
+        @Override
+        public Cursor runQueryOnBackgroundThread(CharSequence constraint)
+        {
+            return new SuggestionsCursor(constraint);
+        }
+
+        private static class SuggestionsCursor extends AbstractCursor {
+            private ArrayList<String> mResults;
+
+            public SuggestionsCursor(CharSequence constraint) {
+
+                Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+
+                try {
+                    List<Address> addressList = geocoder.getFromLocationName(constraint.toString(),10);
+                    mResults = new ArrayList<String>(addressList.size());
+                    for(Address a : addressList){
+
+                        mResults.add(a.toString());
+                        Log.e("---->",a.toString());
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+
+                final int count = 100;
+//                mResults = test(constraint.toString());//new ArrayList<String>(count);
+//                for (int i = 0; i < count; i++) {
+//                    mResults.add(constraint.toString());
+//                }
+                if (!TextUtils.isEmpty(constraint)) {
+                    String constraintString = constraint.toString().toLowerCase(Locale.ROOT);
+                    Iterator<String> iter = mResults.iterator();
+                    while (iter.hasNext()) {
+                        if (!iter.next().toLowerCase(Locale.ROOT).startsWith(constraintString)) {
+                            iter.remove();
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public int getCount() {
+                return mResults.size();
+            }
+
+            @Override
+            public String[] getColumnNames() {
+                return mFields;
+            }
+
+            @Override
+            public long getLong(int column) {
+                if (column == 0) {
+                    return mPos;
+                }
+                throw new UnsupportedOperationException("unimplemented");
+            }
+
+            @Override
+            public String getString(int column) {
+                if (column == 1) {
+                    return mResults.get(mPos);
+                }
+                throw new UnsupportedOperationException("unimplemented");
+            }
+
+            @Override
+            public short getShort(int column) {
+                throw new UnsupportedOperationException("unimplemented");
+            }
+
+            @Override
+            public int getInt(int column) {
+                throw new UnsupportedOperationException("unimplemented");
+            }
+
+            @Override
+            public float getFloat(int column) {
+                throw new UnsupportedOperationException("unimplemented");
+            }
+
+            @Override
+            public double getDouble(int column) {
+                throw new UnsupportedOperationException("unimplemented");
+            }
+
+            @Override
+            public boolean isNull(int column) {
+                return false;
+            }
+        }
+    }
+
 
     @Override // Botó Menú
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -251,7 +478,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             }
         }
     }
-
 
     /////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////// METHODS OF TABS
@@ -351,14 +577,14 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     /////////////////////////// METHODS OF FragmentsCommunicationInterface
     @Override
     public Map getDevices() {
-        return devicesMap;
+        return devices;
     }
 
     public void startProcessGetDevices(){
         // every X seconds getDevicesFromServer
         getDevicesFromServer();
 
-        ((UserMapFragment) getFragment(0)).showDevicesInMap(devicesMap);
+        ((UserMapFragment) getFragment(0)).showDevicesInMap(devices);
     }
 
     public void changeToFragment(int position){
@@ -389,11 +615,31 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
 
 
-
-
-
     private void showToast(CharSequence text){
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+    }
+
+
+
+
+    public class CallGeocoderTask extends AsyncTask<String, Integer, List<Address>> {
+        private Geocoder geocoder;
+        @Override
+        protected List<Address> doInBackground(String... params) {
+            try{
+                geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+                return geocoder.getFromLocationName(params[0],10);
+            }catch(IOException e){
+
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(List<Address> addresses) {
+            ((UserMapFragment)getFragment(0)).centerMapOnPosition(new LatLng(addresses.get(0).getLatitude(),addresses.get(0).getLongitude()));
+            super.onPostExecute(addresses);
+        }
     }
 
 }

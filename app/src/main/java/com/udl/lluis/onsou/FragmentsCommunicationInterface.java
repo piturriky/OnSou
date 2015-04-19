@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 
+import com.google.android.gms.maps.model.LatLng;
+
 import java.util.Map;
 
 /**
@@ -18,4 +20,5 @@ public interface FragmentsCommunicationInterface {
     public void showDialogFragment(int type, Bundle bundle);
     public void onDialogPositiveClick(DialogFragment dialog);
     public void onDialogNegativeClick(DialogFragment dialog);
+    public LatLng getDeviceLocation();
 }

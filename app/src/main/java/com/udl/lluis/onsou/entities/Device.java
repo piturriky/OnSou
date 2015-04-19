@@ -1,6 +1,7 @@
 package com.udl.lluis.onsou.entities;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 
 import java.io.Serializable;
 
@@ -18,6 +19,9 @@ public class Device implements Serializable {
     //private LatLng position;
     private double latitude;
     private double longitude;
+
+    private transient
+    Marker marker;
 
     public Device(long id, String name, LatLng position, boolean isFriend, boolean isOnline) {
         this.id = id;
@@ -47,6 +51,14 @@ public class Device implements Serializable {
 
     public boolean isOnline() {
         return isOnline;
+    }
+
+    public Marker getMarker() {
+        return marker;
+    }
+
+    public void setMarker(Marker marker) {
+        this.marker = marker;
     }
 
     @Override

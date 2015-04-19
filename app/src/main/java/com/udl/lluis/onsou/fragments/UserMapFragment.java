@@ -1,11 +1,8 @@
 package com.udl.lluis.onsou.fragments;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
@@ -31,7 +28,6 @@ import com.udl.lluis.onsou.entities.Device;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 
 /**
@@ -52,10 +48,7 @@ public class UserMapFragment extends Fragment implements Serializable {
     private GoogleMap mMap;
     private MapView mapView;
 
-    private LocationManager locManager;
-    private LocationListener locListener;
-
-    private HashMap<Long,Marker> deviceMarkers;
+    private HashMap<Long,Device> devices;
 
     private static UserMapFragment fragment;
 
@@ -82,38 +75,7 @@ public class UserMapFragment extends Fragment implements Serializable {
         setRetainInstance(true);
 
         myPreference = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        deviceMarkers = new HashMap<>();
-
-        //Obtenemos una referencia al LocationManager
-        locManager = (LocationManager)getActivity().getSystemService(Context.LOCATION_SERVICE);
-
-        locListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                // Send to server new location
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-                Toast.makeText(getActivity(), "Provider Status: " + status, Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onProviderEnabled(String provider) {
-                Toast.makeText(getActivity(), "Provider ON", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onProviderDisabled(String provider) {
-                Toast.makeText(getActivity(), "Provider OFF", Toast.LENGTH_SHORT).show();
-            }
-        };
-
-        if ( !locManager.isProviderEnabled( LocationManager.GPS_PROVIDER ) ) {
-            mCallback.showDialogFragment(4,null);
-        }
-
-
+        devices = new HashMap<Long,Device>();
     }
 
     @Override
@@ -181,45 +143,40 @@ public class UserMapFragment extends Fragment implements Serializable {
             boolean buildings = myPreference.getBoolean("buildings_map_checkbox",true);
             mMap.setBuildingsEnabled(buildings);
 
-            //Nos registramos para recibir actualizaciones de la posición
-            locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, locListener);
-
-            mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            /*mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
                 @Override
                 public void onMapLongClick(LatLng latLng) {
                     mMap.addMarker(new MarkerOptions().position(new LatLng(latLng.latitude, latLng.longitude)).title("Marker - LongClick"));
                 }
-            });
+            });*/
 
             // Try center map on my device
             Location myLoc = mMap.getMyLocation();
             if(myLoc != null){
                 centerMapOnPosition(new LatLng(myLoc.getLatitude(),myLoc.getLongitude()));
             }else{
-                LatLng myLatlon = getDeviceLocation();
+                LatLng myLatlon = mCallback.getDeviceLocation();
                 if(myLatlon != null){
                     centerMapOnPosition(myLatlon);
                 }
             }
-            for(Marker m : deviceMarkers.values()){
+            /*for(Marker m : deviceMarkers.values()){
                 mMap.addMarker(new MarkerOptions()
                         .position(m.getPosition())
                         .title(m.getTitle())
                         .snippet(m.getSnippet()));
                 deviceMarkers.put
-            }
+            }*/
         }
     }
 
     public void centerMapOnDevice(Device device){
-        //LatLng pos = getDeviceLocation();// new LatLng(loc.getLatitude(), loc.getLongitude());
         // Show the current location in Google Map
         mMap.moveCamera(CameraUpdateFactory.newLatLng(device.getPosition()));
         // Zoom in the Google Map
         mMap.animateCamera(CameraUpdateFactory.zoomTo(14));
-        //mMap.addMarker(new MarkerOptions().position(pos).title("You are here!").snippet("Consider yourself located"));
     }
-    private void centerMapOnPosition(LatLng pos){
+    public void centerMapOnPosition(LatLng pos){
         if(pos == null){
             showToast("Null Position");
             return;
@@ -232,8 +189,8 @@ public class UserMapFragment extends Fragment implements Serializable {
     }
 
     public void centerMapOn(Long id){
-        if(deviceMarkers.containsKey(id)){
-            Marker marker = deviceMarkers.get(id);
+        if(devices.containsKey(id)){
+            Marker marker = devices.get(id).getMarker();
             LatLng pos = marker.getPosition();
 
             // Show the current location in Google Map
@@ -247,20 +204,7 @@ public class UserMapFragment extends Fragment implements Serializable {
         }
     }
 
-    // Retorna la posició del usuari
-    private LatLng getDeviceLocation(){
-        if(locManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
-            // Obtenemos la última posición conocida
-            Location loc = locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if(loc != null){
-                return new LatLng(loc.getLatitude(), loc.getLongitude());
-            }
-        }
-        Toast.makeText(getActivity(), "Provider Disabled", Toast.LENGTH_SHORT).show();
-        return null;
-    }
-
-    public void showDevicesInMap(Map devices){
+    public void showDevicesInMap(HashMap devices){
         Log.e("------------>", "SHOW DEVICES IN MAP");
         /*Drawable dd = getResources().getDrawable(R.drawable.ic_action_person);
         // Get the color of the icon depending on system state
@@ -279,6 +223,9 @@ public class UserMapFragment extends Fragment implements Serializable {
                 .icon(BitmapDescriptorFactory.fromBitmap(mDotMarkerBitmap)));
         */
 
+        mMap.clear();
+        this.devices = devices;
+
         for(Device d : new ArrayList<Device>(devices.values())){
             if(d.isOnline()){
                 MarkerOptions marker = new MarkerOptions()
@@ -287,15 +234,18 @@ public class UserMapFragment extends Fragment implements Serializable {
                         .snippet(d.getPosition().latitude + " :: " + d.getPosition().longitude);
                 if(d.isFriend())marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_action_person_blue));
                 else marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_action_person_grey));
-                if(deviceMarkers.containsKey(d.getId())){
+
+                /*if(deviceMarkers.containsKey(d.getId())){
                     deviceMarkers.get(d.getId()).setPosition(d.getPosition());
                 }else{
                     deviceMarkers.put(d.getId(),mMap.addMarker(marker));
-                }
+                }*/
+                d.setMarker(mMap.addMarker(marker));
+                //mMap.addMarker(marker);
             }else{
-                if(deviceMarkers.containsKey(d.getId())){
+                /*if(deviceMarkers.containsKey(d.getId())){
                     deviceMarkers.get(d.getId()).remove();
-                }
+                }*/
             }
         }
     }
