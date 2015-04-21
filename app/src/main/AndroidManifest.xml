@@ -16,6 +16,16 @@
     -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+
+    <permission
+        android:name="com.udl.lluis.onsou.gcm.permission.C2D_MESSAGE"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="com.udl.lluis.onsou.gcm.permission.C2D_MESSAGE" />
 
     <application
         android:allowBackup="true"
@@ -39,6 +49,7 @@
             android:label="@string/title_activity_main" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -50,6 +61,17 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.udl.lluis.onsou.MainActivity" />
         </activity>
+
+        <receiver
+            android:name=".GCMServices.GcmBroadcastReceiver"
+            android:permission="com.google.android.c2dm.permission.SEND" >
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+                <action android:name="com.google.android.c2dm.intent.REGISTRATION" />
+                <category android:name="com.udl.lluis.onsou" />
+            </intent-filter>
+        </receiver>
+        <service android:name=".GCMServices.GcmIntentService" />
     </application>
 
 </manifest>

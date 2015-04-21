@@ -90,6 +90,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         Log.e("------------>", "ACTIVITY ONCREATE");
         setContentView(R.layout.activity_main);
 
+        new GcmRegistrationAsyncTask(this).execute();
+
         if(savedInstanceState != null){
             devices = (HashMap) savedInstanceState.getSerializable("devicesMap");
             //fragmentsMap = (HashMap)savedInstanceState.getSerializable("fragmentMap");
