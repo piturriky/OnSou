@@ -1,7 +1,5 @@
 package com.udl.lluis.onsou.entities;
 
-import android.location.Location;
-
 import com.google.android.gms.maps.model.LatLng;
 
 /**
@@ -12,9 +10,8 @@ public class MyDevice {
     private static MyDevice instance;
 
     private long id;
-
+    private String GCMId;
     private String name;
-
     private LatLng position;
 
     private MyDevice(){
@@ -49,5 +46,13 @@ public class MyDevice {
 
     public void setPosition(LatLng position) {
         this.position = position;
+    }
+
+    public String getGCMId() {
+        return GCMId;
+    }
+
+    public void setGCMId(String GCMId) {
+        this.GCMId = GCMId;
     }
 }

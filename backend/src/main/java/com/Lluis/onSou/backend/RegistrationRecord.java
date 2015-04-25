@@ -20,6 +20,10 @@ public class RegistrationRecord {
     public RegistrationRecord() {
     }
 
+    public Long getId() {
+        return id;
+    }
+
     public String getRegId() {
         return regId;
     }

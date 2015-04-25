@@ -1,5 +1,6 @@
 package com.Lluis.onSou.backend;
 
+import com.Lluis.onSou.backend.model.Device;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyFactory;
 import com.googlecode.objectify.ObjectifyService;
@@ -12,6 +13,7 @@ public class OfyService {
 
     static {
         ObjectifyService.register(RegistrationRecord.class);
+        ObjectifyService.register(Device.class);
     }
 
     public static Objectify ofy() {
