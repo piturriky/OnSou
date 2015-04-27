@@ -13,10 +13,13 @@ import com.google.api.server.spi.config.ApiMethod;
 import com.google.api.server.spi.config.ApiNamespace;
 import com.google.api.server.spi.response.CollectionResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
 import javax.inject.Named;
+
+import javafx.util.Pair;
 
 import static com.Lluis.onSou.backend.OfyService.ofy;
 
@@ -43,12 +46,15 @@ public class RegistrationEndpoint {
         if (device == null) {
             log.info("Username " + username + " don't exist");
             res.setStatus(false);
+            res.setErrorType(1);
             res.setMsg("Username " + username + " don't exist");
-        }
-        else if(!device.getPass().equals(pass)){
+        }else if(!device.getPass().equals(pass)){
             res.setStatus(false);
+            res.setErrorType(2);
             res.setMsg("This password is incorrect");
         }else{
+            device.setOnline(true);
+            ofy().save().entity(device).now();
             res.setStatus(true);
             res.setObj(device);
         }
@@ -60,11 +66,13 @@ public class RegistrationEndpoint {
     public Result register(@Named("username") String username, @Named("pass") String pass) {
         Result res = new Result();
         if (findDevice(username) != null) {
-            log.info("Device " + username + " already registered, skipping register");
+            log.info("Device " + username + " already registered");
             res.setStatus(false);
-            res.setMsg("Device " + username + " already registered, skipping register");
+            res.setErrorType(3);
+            res.setMsg("Device " + username + " already registered");
         }else{
             Device record = new Device(username,pass);
+            record.setOnline(true);
             ofy().save().entity(record).now();
             res.setStatus(true);
             res.setObj(record);
@@ -81,56 +89,92 @@ public class RegistrationEndpoint {
             log.info("Device " + username + " not registered");
             res.setStatus(false);
             res.setMsg("Device " + username + " not registered");
+        }else if(!device.getPass().equals(pass)){
+            res.setStatus(false);
+            res.setErrorType(2);
+            res.setMsg("This password is incorrect");
         }else{
             device.setGCMId(regId);
             ofy().save().entity(device).now();
             res.setStatus(true);
         }
-
         return res;
     }
 
-    /**
-     * Unregister a device from the backend
-     *
-     * @param regId The Google Cloud Messaging registration Id to remove
-     */
-    @ApiMethod(name = "unregisterGCMId")
-    public void unregisterDevice(@Named("regId") String regId) {
-        RegistrationRecord record = findRecord(regId);
-        if (record == null) {
-            log.info("Device " + regId + " not registered, skipping unregister");
-            return;
+
+    @ApiMethod(name = "unregister")
+    public Result unregisterDevice(@Named("id") Long id) {
+        Result result = new Result();
+        Device device = findDevice(id);
+
+        if (device == null) {
+            log.info("Device " + id + " not registered, skipping unregister");
+            result.setStatus(false);
+            result.setErrorType(4);
+        }else{
+            device.setOnline(false);
+            device.setGCMId("");
+            ofy().save().entity(device).now();
+            result.setStatus(true);
+            //ofy().delete().entity().now();
         }
-        ofy().delete().entity(record).now();
+        return result;
     }
 
-    /**
-     * Register a device to the backend
-     *
-     * @param regId The Google Cloud Messaging registration Id to add
-     */
-    @ApiMethod(name = "registerTEST")
-    public RegistrationRecord registerDevice(@Named("regId") String regId) {
-        if (findRecord(regId) != null) {
-            log.info("Device " + regId + " already registered, skipping register");
-            return null;
+    @ApiMethod(name="updatePosition")
+    public Result updatePosition(@Named("id") Long id, @Named("latitude") double latitude, @Named("longitude") double longitude){
+        Result result = new Result();
+        Device device = findDevice(id);
+
+        if(device == null){
+            result.setStatus(false);
+            result.setErrorType(4);
+            result.setMsg(Result.errorTypes.get(4));
+        }else{
+            device.setLatitude(latitude);
+            device.setLongitude(longitude);
+            ofy().save().entity(device).now();
+            result.setStatus(true);
         }
-        RegistrationRecord record = new RegistrationRecord();
-        record.setRegId(regId);
-        ofy().save().entity(record).now();
-        return record;
+        return result;
+    }
+
+    @ApiMethod(name="getDevices")
+    public Result getDevices(@Named("id") Long id){
+        Result result = new Result();
+        Device device = findDevice(id);
+
+        if(device == null){
+            result.setStatus(false);
+            result.setErrorType(4);
+            result.setMsg(Result.errorTypes.get(4));
+        }else{
+            ArrayList <Pair<Device,Boolean>> devicesResult = new ArrayList<>();
+            List<Device> allDevices = ofy().load().type(Device.class).list();
+
+            for(Device d : allDevices){
+                if(d.getId() != id){
+                    if(device.isMyFriend(d.getId())){
+                        devicesResult.add(new Pair<Device, Boolean>(d,true));
+                    }else{
+                        devicesResult.add(new Pair<Device, Boolean>(d,false));
+                    }
+                }
+            }
+
+            result.setStatus(true);
+            result.setObj(devicesResult);
+        }
+        return result;
     }
 
     /**
      * Return a collection of registered devices
      *
-     * @param count The number of devices to list
-     * @return a list of Google Cloud Messaging registration Ids
      */
     @ApiMethod(name = "listDevices")
-    public CollectionResponse<Device> listDevices(@Named("count") int count) {
-        List<Device> records = ofy().load().type(Device.class).limit(count).list();
+    public CollectionResponse<Device> listDevices() {
+        List<Device> records = ofy().load().type(Device.class).list();
         return CollectionResponse.<Device>builder().setItems(records).build();
     }
 

@@ -38,7 +38,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-
 /**
  * A login screen that offers login via email/password.
  */
@@ -214,13 +213,16 @@ public class LoginActivity extends Activity{
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
      */
-    public class UserLoginTask extends AsyncTask<String, Void, Boolean> {
+    public class UserLoginTask extends AsyncTask<String, Void, Result> {
         private Registration regService = null;
 
         private final String mUserName;
         private final String mPassword;
 
-        String type;
+        private String type;
+
+        private Result result;
+        private com.lluis.onsou.backend.registration.model.Device device;
 
         UserLoginTask(String userName, String password) {
             mUserName = userName;
@@ -228,7 +230,7 @@ public class LoginActivity extends Activity{
         }
 
         @Override
-        protected Boolean doInBackground(String... params) {
+        protected Result doInBackground(String... params) {
             type = (String) params[0];
             if (regService == null) {
                 Registration.Builder builder;
@@ -253,10 +255,6 @@ public class LoginActivity extends Activity{
                 regService = builder.build();
             }
 
-            Log.e(TAG,"PASSO");
-
-            com.lluis.onsou.backend.registration.model.Result result;
-            com.lluis.onsou.backend.registration.model.Device device;
             try {
                 // You should send the registration ID to your server over HTTP,
                 // so it can use GCM/HTTP or CCS to send messages to your app.
@@ -272,31 +270,36 @@ public class LoginActivity extends Activity{
                     default:
                         result = null;
                 }
-
-                if (result == null){
-                    return false;
-                }
-                device = (com.lluis.onsou.backend.registration.model.Device)result.getObj();
-                MyDevice.getInstance().setId(device.getId());
-                MyDevice.getInstance().setName(device.getUsername());
-
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-            return true;
+            return result;
         }
 
         @Override
-        protected void onPostExecute(final Boolean success) {
+        protected void onPostExecute(final Result result) {
             mAuthTask = null;
             showProgress(false);
 
-            if (success) {
+            if (result.getStatus()) {
+                device = (com.lluis.onsou.backend.registration.model.Device)result.getObj();
+                MyDevice.getInstance().setId(device.getId());
+                MyDevice.getInstance().setName(device.getUsername());
                 mGCMRegistrationTask = new GcmRegistrationAsyncTask(getApplicationContext(), mUserName, mPassword);
                 mGCMRegistrationTask.execute((Void)null);
             } else {
-                mPasswordView.setError(getString(R.string.error_incorrect_password));
-                mPasswordView.requestFocus();
+                switch(result.getErrorType()){
+                    case 1:
+                    case 3:
+                        mUserNamelView.setError(result.getMsg());
+                        mUserNamelView.requestFocus();
+                        break;
+                    case 2:
+                        mPasswordView.setError(result.getMsg());
+                        mPasswordView.requestFocus();
+                        break;
+                    default:
+                }
             }
         }
 
@@ -409,7 +412,7 @@ public class LoginActivity extends Activity{
 
         @Override
         protected void onCancelled() {
-            mAuthTask = null;
+            mGCMRegistrationTask = null;
             showProgress(false);
         }
     }

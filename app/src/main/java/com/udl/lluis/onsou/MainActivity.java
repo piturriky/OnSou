@@ -28,13 +28,21 @@ import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.SearchView;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.extensions.android.json.AndroidJsonFactory;
+import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
+import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
+import com.lluis.onsou.backend.registration.Registration;
+import com.lluis.onsou.backend.registration.model.Result;
 import com.udl.lluis.onsou.entities.Device;
 import com.udl.lluis.onsou.entities.Group;
+import com.udl.lluis.onsou.entities.MyDevice;
 import com.udl.lluis.onsou.fragments.AddDeviceDialogFragment;
 import com.udl.lluis.onsou.fragments.AddGroupDialogFragment;
 import com.udl.lluis.onsou.fragments.FriendsFragment;
@@ -77,6 +85,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     private LocationManager locManager;
     private LocationListener locListener;
+
+    private Handler handler;
+    private SendMyPositionTask sendMyPositionTask = null;
+    private GetDevicesTask getDevicesTask = null;
 
 
     // Devices
@@ -138,6 +150,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             @Override
             public void onLocationChanged(Location location) {
                 // Send to server new location
+                sendMyPositionTask = new SendMyPositionTask();
+                sendMyPositionTask.execute(location);
             }
 
             @Override
@@ -613,14 +627,16 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     }
 
-
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////// ShowToast
 
     private void showToast(CharSequence text){
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
 
 
-
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////// Geocoder
 
     public class CallGeocoderTask extends AsyncTask<String, Integer, List<Address>> {
         private Geocoder geocoder;
@@ -642,6 +658,121 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////// SendMyPositionTask
+
+    private class SendMyPositionTask extends AsyncTask <Location ,Void ,com.lluis.onsou.backend.registration.model.Result>{
+
+        private Registration regService = null;
+
+        private Result result;
+
+        @Override
+        protected Result doInBackground(Location... params) {
+            if (regService == null) {
+                Registration.Builder builder;
+                if(false){
+                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(),
+                            new AndroidJsonFactory(), null)
+                            // Need setRootUrl and setGoogleClientRequestInitializer only for local testing,
+                            // otherwise they can be skipped
+                            .setRootUrl("http://192.168.1.4:8080/_ah/api/")
+                            .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
+                                @Override
+                                public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest)
+                                        throws IOException {
+                                    abstractGoogleClientRequest.setDisableGZipContent(true);
+                                }
+                            });
+                    // end of optional local run code
+                }else{
+                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                            .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
+                }
+                regService = builder.build();
+            }
+            try {
+                result = regService.updatePosition(MyDevice.getInstance().getId(), ((Location)params[0]).getLatitude(),((Location)params[0]).getLongitude()).execute();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+            return result;
+        }
+
+        @Override
+        protected void onPostExecute(Result result) {
+            super.onPostExecute(result);
+            sendMyPositionTask = null;
+            //TODO if return error
+        }
+        @Override
+        protected void onCancelled() {
+            sendMyPositionTask = null;
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////// GetDevicesTask
+
+    private class GetDevicesTask extends AsyncTask <Void ,Void ,com.lluis.onsou.backend.registration.model.Result>{
+
+        private Registration regService = null;
+
+        private Result result;
+
+        @Override
+        protected com.lluis.onsou.backend.registration.model.Result doInBackground(Void... params) {
+            if (regService == null) {
+                Registration.Builder builder;
+                if(false){
+                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(),
+                            new AndroidJsonFactory(), null)
+                            // Need setRootUrl and setGoogleClientRequestInitializer only for local testing,
+                            // otherwise they can be skipped
+                            .setRootUrl("http://192.168.1.4:8080/_ah/api/")
+                            .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
+                                @Override
+                                public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest)
+                                        throws IOException {
+                                    abstractGoogleClientRequest.setDisableGZipContent(true);
+                                }
+                            });
+                    // end of optional local run code
+                }else{
+                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                            .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
+                }
+                regService = builder.build();
+            }
+            try {
+                result = regService.getDevices(MyDevice.getInstance().getId()).execute();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+            return result;
+        }
+
+        @Override
+        protected void onPostExecute(Result result) {
+            super.onPostExecute(result);
+            sendMyPositionTask = null;
+            if(result.getStatus()){
+                List<Pair<com.lluis.onsou.backend.registration.model.Device,Boolean>> devicesList =
+                        (List<Pair<com.lluis.onsou.backend.registration.model.Device,Boolean>>)result.getObj();
+                devices.clear();
+                for(Pair<com.lluis.onsou.backend.registration.model.Device,Boolean> devicePair : devicesList){
+                    Device d = new Device(devicePair.first.getId(),devicePair.first.getUsername(),
+                            devicePair.first.getLatitude(),devicePair.first.getLongitude(),
+                            devicePair.second,devicePair.first.getOnline());
+                    devices.put(d.getId(),d);
+                }
+            }
+        }
+        @Override
+        protected void onCancelled() {
+            sendMyPositionTask = null;
+        }
+    }
 }
 
 

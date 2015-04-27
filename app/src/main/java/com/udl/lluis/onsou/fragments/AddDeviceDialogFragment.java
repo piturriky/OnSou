@@ -4,10 +4,15 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.EditText;
 
+import com.lluis.onsou.backend.registration.model.Result;
 import com.udl.lluis.onsou.FragmentsCommunicationInterface;
 import com.udl.lluis.onsou.R;
 
@@ -19,13 +24,13 @@ public  class AddDeviceDialogFragment extends DialogFragment {
     /* The activity that creates an instance of this dialog fragment must
  * implement this interface in order to receive event callbacks.
  * Each method passes the DialogFragment in case the host needs to query it. */
-//    public interface AddDeviceDialogListener {
-//        public void onDialogPositiveClick(DialogFragment dialog);
-//        public void onDialogNegativeClick(DialogFragment dialog);
-//    }
 
     // Use this instance of the interface to deliver action events
-    FragmentsCommunicationInterface mListener;
+    private FragmentsCommunicationInterface mListener;
+
+    private AddDeviceTask addDeviceTask = null;
+
+    private EditText usernameAddDevice;
 
     // Override the Fragment.onAttach() method to instantiate the NoticeDialogListener
     @Override
@@ -48,14 +53,23 @@ public  class AddDeviceDialogFragment extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         // Get the layout inflater
         LayoutInflater inflater = getActivity().getLayoutInflater();
-
+        View dialogLayout = inflater.inflate(R.layout.add_device_dialog, null);
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout
-        builder.setView(inflater.inflate(R.layout.add_device_dialog, null))
+        builder.setView(dialogLayout)
                 .setTitle(R.string.addDevice)
                 .setPositiveButton(R.string.add, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         mListener.onDialogPositiveClick(AddDeviceDialogFragment.this);
+
+                        String username = usernameAddDevice.getText().toString();
+                        if (TextUtils.isEmpty(username)) {
+                            usernameAddDevice.setError(getString(R.string.error_field_required));
+                            usernameAddDevice.requestFocus();
+                        }else{
+                            addDeviceTask = new AddDeviceTask();
+                            addDeviceTask.execute(username);
+                        }
                     }
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
@@ -63,7 +77,28 @@ public  class AddDeviceDialogFragment extends DialogFragment {
                         mListener.onDialogNegativeClick(AddDeviceDialogFragment.this);
                     }
                 });
+        usernameAddDevice = (EditText) dialogLayout.findViewById(R.id.usernameAddDevice);
         // Create the AlertDialog object and return it
         return builder.create();
+    }
+
+    private class AddDeviceTask extends AsyncTask<String,  Void, Result>{
+        @Override
+        protected Result doInBackground(String... params) {
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Result result) {
+
+            super.onPostExecute(result);
+        }
+
+        @Override
+        protected void onCancelled() {
+
+            super.onCancelled();
+        }
     }
 }

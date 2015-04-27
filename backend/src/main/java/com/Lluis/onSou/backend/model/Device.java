@@ -4,6 +4,8 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
+import java.util.ArrayList;
+
 /**
  * Created by Lluís on 19/03/2015.
  */
@@ -19,11 +21,16 @@ public class Device{
     private String username;
     @Index
     private String pass;
-
+    @Index
     private boolean isOnline;
-
+    @Index
+    private boolean onlyForFriends;
+    @Index
     private double latitude;
+    @Index
     private double longitude;
+    @Index
+    private ArrayList<Long> friendsList = new ArrayList<>();
 
     public Device(){}
 
@@ -78,6 +85,34 @@ public class Device{
 
     public void setOnline(boolean isOnline) {
         this.isOnline = isOnline;
+    }
+
+    public boolean isOnlyForFriends() {
+        return onlyForFriends;
+    }
+
+    public void setOnlyForFriends(boolean onlyForFriends) {
+        this.onlyForFriends = onlyForFriends;
+    }
+
+    public void addFriend(Long id){
+        if(!friendsList.contains(id)){
+            friendsList.add(id);
+        }
+    }
+
+    public void removeFriend(Long id){
+        if(friendsList.contains(id)){
+            friendsList.remove(id);
+        }
+    }
+
+    public boolean isMyFriend(Long id){
+        return friendsList.contains(id);
+    }
+
+    public ArrayList<Long> getFriends(){
+        return friendsList;
     }
 
     @Override

@@ -20,8 +20,7 @@ public class Device implements Serializable {
     private double latitude;
     private double longitude;
 
-    private transient
-    Marker marker;
+    private transient Marker marker;
 
     public Device(long id, String name, LatLng position, boolean isFriend, boolean isOnline) {
         this.id = id;
@@ -29,6 +28,15 @@ public class Device implements Serializable {
         //this.position = position;
         this.latitude = position.latitude;
         this.longitude = position.longitude;
+        this.isFriend = isFriend;
+        this.isOnline = isOnline;
+    }
+    public Device(long id, String name, double latitude, double longitude, boolean isFriend, boolean isOnline) {
+        this.id = id;
+        this.name = name;
+        //this.position = position;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.isFriend = isFriend;
         this.isOnline = isOnline;
     }
