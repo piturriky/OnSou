@@ -12,9 +12,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.extensions.android.json.AndroidJsonFactory;
+import com.lluis.onsou.backend.registration.Registration;
 import com.lluis.onsou.backend.registration.model.Result;
 import com.udl.lluis.onsou.FragmentsCommunicationInterface;
 import com.udl.lluis.onsou.R;
+import com.udl.lluis.onsou.entities.MyDevice;
 
 /**
  * Created by Lluís on 18/03/2015.
@@ -83,21 +87,27 @@ public  class AddDeviceDialogFragment extends DialogFragment {
     }
 
     private class AddDeviceTask extends AsyncTask<String,  Void, Result>{
+        private Registration regService = null;
         @Override
         protected Result doInBackground(String... params) {
-
+            if (regService == null) {
+                Registration.Builder builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                        .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
+                regService = builder.build();
+            }
+            Result res = regService.addDevice(MyDevice.getInstance().getId(),(String)params[0]).execute();
             return null;
         }
 
         @Override
         protected void onPostExecute(Result result) {
-
             super.onPostExecute(result);
+            addDeviceTask = null;
         }
 
         @Override
         protected void onCancelled() {
-
+            addDeviceTask = null;
             super.onCancelled();
         }
     }

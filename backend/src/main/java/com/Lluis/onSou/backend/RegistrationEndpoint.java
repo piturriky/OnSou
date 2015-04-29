@@ -6,13 +6,19 @@
 
 package com.Lluis.onSou.backend;
 
+import com.Lluis.onSou.backend.model.AddFriendNotification;
 import com.Lluis.onSou.backend.model.Device;
+import com.Lluis.onSou.backend.model.Notification;
 import com.Lluis.onSou.backend.model.Result;
+import com.google.android.gcm.server.Constants;
+import com.google.android.gcm.server.Message;
+import com.google.android.gcm.server.Sender;
 import com.google.api.server.spi.config.Api;
 import com.google.api.server.spi.config.ApiMethod;
 import com.google.api.server.spi.config.ApiNamespace;
 import com.google.api.server.spi.response.CollectionResponse;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -38,6 +44,10 @@ public class RegistrationEndpoint {
 
     private static final Logger log = Logger.getLogger(RegistrationEndpoint.class.getName());
 
+    /**
+     * Api Keys can be obtained from the google cloud console
+     */
+    private static final String API_KEY = System.getProperty("gcm.api.key");
 
     @ApiMethod(name = "login")
     public Result login(@Named("username") String username, @Named("pass") String pass) {
@@ -58,7 +68,6 @@ public class RegistrationEndpoint {
             res.setStatus(true);
             res.setObj(device);
         }
-
         return res;
     }
 
@@ -71,11 +80,15 @@ public class RegistrationEndpoint {
             res.setErrorType(3);
             res.setMsg("Device " + username + " already registered");
         }else{
-            Device record = new Device(username,pass);
-            record.setOnline(true);
-            ofy().save().entity(record).now();
+            Device device = new Device(username,pass);
+            device.setOnline(true);
+            ofy().save().entity(device).now();
             res.setStatus(true);
-            res.setObj(record);
+            res.setObj(device);
+            if(device.hasPendingNotifications()){
+                Thread t = new SendPendingNotificationsThread(device);
+                t.run();
+            }
         }
 
         return res;
@@ -168,6 +181,32 @@ public class RegistrationEndpoint {
         return result;
     }
 
+    @ApiMethod(name="addDevice")
+    public Result addDevice(@Named("id") Long id, @Named("friendUserName") String friendUserName){
+        Result result = new Result();
+        Device device = findDevice(id);
+        Device friendDevice = findDevice(friendUserName);
+
+        if(device == null){
+            result.setStatus(false);
+            result.setErrorType(4);
+            result.setMsg(Result.errorTypes.get(4));
+        }else if(friendDevice == null){
+            result.setStatus(false);
+            result.setErrorType(4);
+            result.setMsg("This username doesn't exist");
+        }else{
+            AddFriendNotification notification = new AddFriendNotification(id,friendDevice.getId());
+            if(friendDevice.isOnline()){
+                sendAddFriendNotification(notification);
+            }else{
+                friendDevice.addNotification(notification);
+                ofy().save().entity(friendDevice).now();
+            }
+        }
+        return result;
+    }
+
     /**
      * Return a collection of registered devices
      *
@@ -178,6 +217,86 @@ public class RegistrationEndpoint {
         return CollectionResponse.<Device>builder().setItems(records).build();
     }
 
+    private boolean sendAddFriendNotification(@Named("Notification")AddFriendNotification notification){
+        Device from = findDevice(notification.getSender());
+
+        Message msg = new Message.Builder()
+                .addData("type", "addFriendNotification")
+                .addData("from", from.getUsername())
+                .build();
+        try {
+            return sendMessage(msg,notification.getReceiver());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private boolean sendMessage(Message msg,@Named("id") Long to) throws IOException{
+        Device device = findDevice(to);
+        Sender sender = new Sender(API_KEY);
+        com.google.android.gcm.server.Result result = sender.send(msg, device.getGCMId(), 5);
+        if (result.getMessageId() != null) {
+            log.info("Message sent to " + to);
+            String canonicalRegId = result.getCanonicalRegistrationId();
+
+            if (canonicalRegId != null) {
+                // if the regId changed, we have to update the datastore
+                log.info("Registration Id changed for " + to + " updating to " + canonicalRegId);
+                device.setGCMId(canonicalRegId);
+                ofy().save().entity(device).now();
+            }
+            return true;
+        } else {
+            String error = result.getErrorCodeName();
+            if (error.equals(Constants.ERROR_NOT_REGISTERED)) {
+                log.warning("Registration Id " + device.getGCMId() + " no longer registered with GCM, removing from datastore");
+                // if the device is no longer registered with Gcm, remove it from the datastore
+                // TODO ofy().delete().entity(device).now();
+            } else {
+                log.warning("Error when sending message : " + error);
+            }
+            return false;
+        }
+    }
+
+    public void sendMessage1(@Named("message") String message) throws IOException {
+        if (message == null || message.trim().length() == 0) {
+            log.warning("Not sending message because it is empty");
+            return;
+        }
+        // crop longer messages
+        if (message.length() > 1000) {
+            message = message.substring(0, 1000) + "[...]";
+        }
+        Sender sender = new Sender(API_KEY);
+        Message msg = new Message.Builder().addData("message", message).build();
+        List<Device> devices = ofy().load().type(Device.class).list();
+        for (Device device : devices) {
+            com.google.android.gcm.server.Result result = sender.send(msg, device.getGCMId(), 5);
+            if (result.getMessageId() != null) {
+                log.info("Message sent to " + device.getGCMId());
+                String canonicalRegId = result.getCanonicalRegistrationId();
+                if (canonicalRegId != null) {
+                    // if the regId changed, we have to update the datastore
+                    log.info("Registration Id changed for " + device.getGCMId() + " updating to " + canonicalRegId);
+                    device.setGCMId(canonicalRegId);
+                    ofy().save().entity(device).now();
+                }
+            } else {
+                String error = result.getErrorCodeName();
+                if (error.equals(Constants.ERROR_NOT_REGISTERED)) {
+                    log.warning("Registration Id " + device.getGCMId() + " no longer registered with GCM, removing from datastore");
+                    // if the device is no longer registered with Gcm, remove it from the datastore
+                    ofy().delete().entity(device).now();
+                } else {
+                    log.warning("Error when sending message : " + error);
+                }
+            }
+        }
+    }
+
+
     private RegistrationRecord findRecord(String regId) {
         return ofy().load().type(RegistrationRecord.class).filter("regId", regId).first().now();
     }
@@ -187,5 +306,28 @@ public class RegistrationEndpoint {
     }
     private Device findDevice(String username){
         return ofy().load().type(Device.class).filter("username", username).first().now();
+    }
+
+
+    private class SendPendingNotificationsThread extends Thread{
+
+        Device device;
+
+        public SendPendingNotificationsThread(Device device){
+            super();
+            this.device = device;
+        }
+
+        @Override
+        public void run() {
+            super.run();
+            for(Notification not : device.pendingNotifications()){
+                if(not instanceof AddFriendNotification){
+                    if(sendAddFriendNotification((AddFriendNotification)not)){
+                        device.removeNotification(not);
+                    }
+                }
+            }
+        }
     }
 }

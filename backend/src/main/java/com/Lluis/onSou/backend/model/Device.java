@@ -31,6 +31,8 @@ public class Device{
     private double longitude;
     @Index
     private ArrayList<Long> friendsList = new ArrayList<>();
+    @Index
+    private ArrayList<Notification> pendingNotifications = new ArrayList<>();
 
     public Device(){}
 
@@ -113,6 +115,24 @@ public class Device{
 
     public ArrayList<Long> getFriends(){
         return friendsList;
+    }
+
+    public boolean hasPendingNotifications(){
+        return pendingNotifications.size() > 0;
+    }
+
+    public ArrayList<Notification> pendingNotifications(){
+        return pendingNotifications;
+    }
+
+    public void removeNotification(Notification notification){
+        if(pendingNotifications.contains(notification)){
+            pendingNotifications.remove(notification);
+        }
+    }
+
+    public void addNotification(Notification notification){
+        pendingNotifications.add(notification);
     }
 
     @Override
