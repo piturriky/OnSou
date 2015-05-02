@@ -8,7 +8,6 @@ package com.Lluis.onSou.backend;
 
 import com.Lluis.onSou.backend.model.AddFriendNotification;
 import com.Lluis.onSou.backend.model.Device;
-import com.Lluis.onSou.backend.model.Notification;
 import com.Lluis.onSou.backend.model.Result;
 import com.google.android.gcm.server.Constants;
 import com.google.android.gcm.server.Message;
@@ -24,8 +23,6 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import javax.inject.Named;
-
-import javafx.util.Pair;
 
 import static com.Lluis.onSou.backend.OfyService.ofy;
 
@@ -66,7 +63,7 @@ public class RegistrationEndpoint {
             device.setOnline(true);
             ofy().save().entity(device).now();
             res.setStatus(true);
-            res.setObj(device);
+            res.setDevice(device);
         }
         return res;
     }
@@ -74,28 +71,28 @@ public class RegistrationEndpoint {
     @ApiMethod(name = "register")
     public Result register(@Named("username") String username, @Named("pass") String pass) {
         Result res = new Result();
+        Device device = null;
         if (findDevice(username) != null) {
             log.info("Device " + username + " already registered");
             res.setStatus(false);
             res.setErrorType(3);
             res.setMsg("Device " + username + " already registered");
         }else{
-            Device device = new Device(username,pass);
+            device = new Device(username,pass);
             device.setOnline(true);
             ofy().save().entity(device).now();
             res.setStatus(true);
-            res.setObj(device);
+            res.setDevice(device);
             if(device.hasPendingNotifications()){
                 Thread t = new SendPendingNotificationsThread(device);
                 t.run();
             }
         }
-
         return res;
     }
 
     @ApiMethod(name = "registerGCMId")
-    public Result registerGCMId(@Named("username") String username, @Named("pass") String pass, @Named("regId") String regId) {
+    public Result registerGCMId(@Named("username") String username, @Named("pass") String pass, @Named("GCMId") String regId) {
         Result res = new Result();
         Device device = findDevice(username);
         if (device == null) {
@@ -162,27 +159,61 @@ public class RegistrationEndpoint {
             result.setErrorType(4);
             result.setMsg(Result.errorTypes.get(4));
         }else{
-            ArrayList <Pair<Device,Boolean>> devicesResult = new ArrayList<>();
+            ArrayList<Device> devicesResult = new ArrayList<>();
             List<Device> allDevices = ofy().load().type(Device.class).list();
 
             for(Device d : allDevices){
-                if(d.getId() != id){
+//                if(d.getId().compareTo(id) != 0){
                     if(device.isMyFriend(d.getId())){
-                        devicesResult.add(new Pair<Device, Boolean>(d,true));
+                        d.setIsFriend(true);
+                        devicesResult.add(d);//true
                     }else{
-                        devicesResult.add(new Pair<Device, Boolean>(d,false));
+                        d.setIsFriend(false);
+                        devicesResult.add(d);//false
                     }
-                }
+//                }
             }
 
             result.setStatus(true);
-            result.setObj(devicesResult);
+            result.setDevices(devicesResult);
         }
         return result;
     }
 
     @ApiMethod(name="addDevice")
-    public Result addDevice(@Named("id") Long id, @Named("friendUserName") String friendUserName){
+    public Result addDevice(@Named("id") Long id, @Named("friendUserName") String friendUserName) {
+        Result result = new Result();
+        Device device = findDevice(id);
+        Device friendDevice = findDevice(friendUserName);
+
+        if (device == null) {
+            result.setStatus(false);
+            result.setErrorType(4);
+            result.setMsg(Result.errorTypes.get(4));
+        } else if (friendDevice == null) {
+            result.setStatus(false);
+            result.setErrorType(1);
+            result.setMsg("This username doesn't exist");
+        }else if(device.isMyFriend(friendDevice.getId())){
+            result.setStatus(false);
+            result.setErrorType(5);
+            result.setMsg(Result.errorTypes.get(5));
+        }else{
+            AddFriendNotification notification = new AddFriendNotification(id,friendDevice.getId());
+            if(friendDevice.isOnline()){
+                sendAddFriendNotification(notification);
+            }else{
+                friendDevice.addNotification(notification);
+                ofy().save().entity(friendDevice).now();
+            }
+            result.setStatus(true);
+            result.setMsg("Request submitted");
+        }
+        return result;
+    }
+
+    @ApiMethod(name="acceptFriend")
+    public Result acceptFriend(@Named("id") Long id, @Named("friendUserName") String friendUserName){
         Result result = new Result();
         Device device = findDevice(id);
         Device friendDevice = findDevice(friendUserName);
@@ -193,16 +224,19 @@ public class RegistrationEndpoint {
             result.setMsg(Result.errorTypes.get(4));
         }else if(friendDevice == null){
             result.setStatus(false);
-            result.setErrorType(4);
+            result.setErrorType(1);
             result.setMsg("This username doesn't exist");
+        }else if(device.isMyFriend(friendDevice.getId())){
+            result.setStatus(false);
+            result.setErrorType(5);
+            result.setMsg(Result.errorTypes.get(5));
         }else{
-            AddFriendNotification notification = new AddFriendNotification(id,friendDevice.getId());
-            if(friendDevice.isOnline()){
-                sendAddFriendNotification(notification);
-            }else{
-                friendDevice.addNotification(notification);
-                ofy().save().entity(friendDevice).now();
-            }
+            device.addFriend(friendDevice.getId());
+            friendDevice.addFriend(device.getId());
+            ofy().save().entity(friendDevice).now();
+            ofy().save().entity(device).now();
+            result.setStatus(true);
+            result.setMsg("Request submitted");
         }
         return result;
     }
@@ -222,7 +256,7 @@ public class RegistrationEndpoint {
 
         Message msg = new Message.Builder()
                 .addData("type", "addFriendNotification")
-                .addData("from", from.getUsername())
+                .addData("senderNotification", from.getUsername())
                 .build();
         try {
             return sendMessage(msg,notification.getReceiver());
@@ -321,13 +355,13 @@ public class RegistrationEndpoint {
         @Override
         public void run() {
             super.run();
-            for(Notification not : device.pendingNotifications()){
-                if(not instanceof AddFriendNotification){
-                    if(sendAddFriendNotification((AddFriendNotification)not)){
-                        device.removeNotification(not);
-                    }
-                }
-            }
+//            for(Notification not : device.pendingNotifications()){
+//                if(not instanceof AddFriendNotification){
+//                    if(sendAddFriendNotification((AddFriendNotification)not)){
+//                        device.removeNotification(not);
+//                    }
+//                }
+//            }
         }
     }
 }

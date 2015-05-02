@@ -89,7 +89,6 @@ public class UserMapFragment extends Fragment implements Serializable {
         mMap = mapView.getMap();
 
         MapsInitializer.initialize(this.getActivity());
-        initializeMap();
 
         return inflatedView;
     }
@@ -111,6 +110,7 @@ public class UserMapFragment extends Fragment implements Serializable {
     @Override
     public void onResume() {
         Log.e("------------>", "FRAGMENT ONRESUME");
+        initializeMap();
         super.onResume();
     }
 
@@ -143,13 +143,6 @@ public class UserMapFragment extends Fragment implements Serializable {
             boolean buildings = myPreference.getBoolean("buildings_map_checkbox",true);
             mMap.setBuildingsEnabled(buildings);
 
-            /*mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
-                @Override
-                public void onMapLongClick(LatLng latLng) {
-                    mMap.addMarker(new MarkerOptions().position(new LatLng(latLng.latitude, latLng.longitude)).title("Marker - LongClick"));
-                }
-            });*/
-
             // Try center map on my device
             Location myLoc = mMap.getMyLocation();
             if(myLoc != null){
@@ -160,13 +153,6 @@ public class UserMapFragment extends Fragment implements Serializable {
                     centerMapOnPosition(myLatlon);
                 }
             }
-            /*for(Marker m : deviceMarkers.values()){
-                mMap.addMarker(new MarkerOptions()
-                        .position(m.getPosition())
-                        .title(m.getTitle())
-                        .snippet(m.getSnippet()));
-                deviceMarkers.put
-            }*/
         }
     }
 

@@ -9,6 +9,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -21,8 +23,8 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.lluis.onsou.backend.registration.model.Result;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -31,12 +33,15 @@ import com.google.api.client.extensions.android.json.AndroidJsonFactory;
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
 import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
 import com.lluis.onsou.backend.registration.Registration;
+import com.lluis.onsou.backend.registration.model.Result;
 import com.udl.lluis.onsou.entities.MyDevice;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+
+
 
 /**
  * A login screen that offers login via email/password.
@@ -115,8 +120,12 @@ public class LoginActivity extends Activity{
     protected void onResume()
     {
         super.onResume();
-
-        //checkPlayServices();
+        Log.e(TAG,"ONRESUME");
+        checkPlayServices();
+        if(MyDevice.getInstance().isOnline()){
+            startMainActivity();
+            finish();
+        }
     }
 
     /**
@@ -155,10 +164,24 @@ public class LoginActivity extends Activity{
             cancel = true;
         }
 
+        // Check if network is active
+        if(!checkNetwork()){
+            showToast(getString(R.string.activateNetwork));
+            cancel = true;
+
+            startActivityForResult(new Intent(android.provider.Settings.ACTION_SETTINGS), 0);
+//            final ComponentName cn = new ComponentName("com.android.phone","com.android.phone.NetworkSetting");//MobileNetworkSettings
+//            final Intent intent = new Intent(Settings.ACTION_DATA_ROAMING_SETTINGS);
+//            intent.addCategory(Intent.ACTION_MAIN);
+//            intent.setComponent(cn);
+//            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//            startActivity(intent);
+        }
+
         if (cancel) {
             // There was an error; don't attempt login and focus the first
             // form field with an error.
-            focusView.requestFocus();
+            if(focusView != null)focusView.requestFocus();
         } else {
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
@@ -168,8 +191,13 @@ public class LoginActivity extends Activity{
         }
     }
 
+    public boolean checkNetwork(){
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+        return networkInfo != null && networkInfo.isConnected();
+    }
+
     private boolean isPasswordValid(String password) {
-        //TODO: Replace this with your own logic
         return password.length() > 4;
     }
 
@@ -282,9 +310,10 @@ public class LoginActivity extends Activity{
             showProgress(false);
 
             if (result.getStatus()) {
-                device = (com.lluis.onsou.backend.registration.model.Device)result.getObj();
+                device = (com.lluis.onsou.backend.registration.model.Device)result.getDevice();
                 MyDevice.getInstance().setId(device.getId());
                 MyDevice.getInstance().setName(device.getUsername());
+                MyDevice.getInstance().setOnline(device.getOnline());
                 mGCMRegistrationTask = new GcmRegistrationAsyncTask(getApplicationContext(), mUserName, mPassword);
                 mGCMRegistrationTask.execute((Void)null);
             } else {
@@ -398,9 +427,7 @@ public class LoginActivity extends Activity{
             mGCMRegistrationTask = null;
 
             if (success) {
-                Intent intent = null;
-                intent = new Intent(loginActivity, MainActivity.class);
-                startActivity(intent);
+                startMainActivity();
                 showProgress(false);
                 finish();
             } else {
@@ -415,6 +442,12 @@ public class LoginActivity extends Activity{
             mGCMRegistrationTask = null;
             showProgress(false);
         }
+    }
+
+    private void startMainActivity(){
+        Intent intent = null;
+        intent = new Intent(loginActivity, MainActivity.class);
+        startActivity(intent);
     }
 
     private boolean checkPlayServices() {
@@ -504,6 +537,11 @@ public class LoginActivity extends Activity{
 
         editor.commit();
     }
+
+    private void showToast(CharSequence text){
+        Toast.makeText(this, text, Toast.LENGTH_LONG).show();
+    }
+
 }
 
 

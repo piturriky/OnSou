@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -128,14 +127,29 @@ public class FriendsFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
 
 
-        for(Device d : new ArrayList<Device>(mCallback.getDevices().values())){
-           if (d.isFriend()){
-               if(d.isOnline()){
-                   devicesOnLineList.add(d);
-               }else{
-                   devicesOffLineList.add(d);
-               }
-           }
+//        for(Device d : new ArrayList<Device>(mCallback.getDevices().values())){
+//           if (d.isFriend()){
+//               if(d.isOnline()){
+//                   devicesOnLineList.add(d);
+//               }else{
+//                   devicesOffLineList.add(d);
+//               }
+//           }
+//        }
+    }
+
+    public void showDevices(Map devices){
+        for(Device d : new ArrayList<Device>(devices.values())){
+            if (d.isFriend()){
+                if(d.isOnline()){
+                    devicesOnLineList.add(d);
+                }else{
+                    devicesOffLineList.add(d);
+                }
+            }
+        }
+        synchronized(mAdapter){
+            mAdapter.notify();
         }
 
     }

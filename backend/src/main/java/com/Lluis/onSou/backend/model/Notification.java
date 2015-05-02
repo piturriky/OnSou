@@ -18,6 +18,10 @@ public class Notification {
 //    }};
 
 
+    public Long getId() {
+        return Id;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

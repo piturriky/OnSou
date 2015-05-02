@@ -14,6 +14,8 @@ public class AddFriendNotification extends Notification {
     @Index
     private Long receiver;
 
+    public AddFriendNotification(){}
+
     public AddFriendNotification(Long sender, Long receiver){
         this.sender = sender;
         this.receiver = receiver;

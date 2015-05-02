@@ -15,6 +15,7 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -28,7 +29,6 @@ import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.SearchView;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -45,6 +45,7 @@ import com.udl.lluis.onsou.entities.Group;
 import com.udl.lluis.onsou.entities.MyDevice;
 import com.udl.lluis.onsou.fragments.AddDeviceDialogFragment;
 import com.udl.lluis.onsou.fragments.AddGroupDialogFragment;
+import com.udl.lluis.onsou.fragments.DialogInformation;
 import com.udl.lluis.onsou.fragments.FriendsFragment;
 import com.udl.lluis.onsou.fragments.GroupsFragment;
 import com.udl.lluis.onsou.fragments.ManageFriendsDialogFragment;
@@ -87,8 +88,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     private LocationListener locListener;
 
     private Handler handler;
+    private GetDevicesThread thread;
     private SendMyPositionTask sendMyPositionTask = null;
     private GetDevicesTask getDevicesTask = null;
+    private LogoutTask logoutTask = null;
 
 
     // Devices
@@ -105,6 +108,16 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         if(savedInstanceState != null){
             devices = (HashMap) savedInstanceState.getSerializable("devicesMap");
             //fragmentsMap = (HashMap)savedInstanceState.getSerializable("fragmentMap");
+        }
+
+        if(getIntent().getExtras() != null){
+            if(getIntent().getExtras().getBoolean("fromNotification")){
+                Bundle bundle = new Bundle();
+                bundle.putSerializable("message",String.format(getString(R.string.addFriend),getIntent().getExtras().getString("senderNotification")));
+                bundle.putSerializable("senderNotification",getIntent().getExtras().getString("senderNotification"));
+                bundle.putSerializable("type","addFriend");
+                showDialogFragment(5,bundle);
+            }
         }
 
         // Set up the action bar.
@@ -141,6 +154,21 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                             .setTabListener(this));
         }
 
+        this.thread = new GetDevicesThread();
+        this.handler = new Handler(){
+            @Override
+            public void handleMessage(Message msg){
+                switch (msg.what){
+                    case 0:
+                        devices.clear();
+                        devices = (HashMap<Long, Device>) msg.obj;
+                        ((UserMapFragment) getFragment(0)).showDevicesInMap(devices);
+                        ((FriendsFragment) getFragment(1)).showDevices(devices);
+                        break;
+                }
+                super.handleMessage(msg);
+            }
+        };
 
 
         //Obtenemos una referencia al LocationManager
@@ -175,7 +203,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
 
         devices = new HashMap<Long,Device>();
-        getDevicesFromServer();
+        //getDevicesFromServer();
     }
 
     @Override
@@ -187,6 +215,18 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        //TODO thread.run();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        //TODO thread.goStop();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         //Nos registramos para recibir actualizaciones de la posición
@@ -194,17 +234,23 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         Log.e("------------>", "ACTIVITY ONRESUME");
     }
 
+    @Override
+    protected void onDestroy() {
+        locManager.removeUpdates(locListener);
+        super.onDestroy();
+    }
+
     // Send petition to server getDevices()
     //      this return available devices depending params configured
-    private void getDevicesFromServer(){
-
-        devices.clear();
-
-        // FILL devicesMap from download data
-        for(Device d : getSimulatedDevices()){
-            devices.put(d.getId(),d);
-        }
-    }
+//    private void getDevicesFromServer(){
+//
+//        devices.clear();
+//
+//        // FILL devicesMap from download data
+//        for(Device d : getSimulatedDevices()){
+//            devices.put(d.getId(),d);
+//        }
+//    }
 
     private List<Device> getSimulatedDevices(){
         List<Device> list = new ArrayList<Device>(){{
@@ -245,6 +291,11 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 break;
             case 4: // To enable GPS
                 buildAlertMessageNoGps();
+                break;
+            case 5: //Dialog Information
+                DialogInformation e = new DialogInformation();
+                e.setArguments(bundle);
+                e.show(getSupportFragmentManager(),"DialogInformation");
                 break;
         }
     }
@@ -458,17 +509,22 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 return true;
             case R.id.airport_menuRefresh:
                 setRefreshActionButtonState(true);
+                startProcessGetDevices();
                 // Execute some code after 2 seconds have passed
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    public void run() {
-                        setRefreshActionButtonState(false);
-                    }
-                }, 2000);
+//                Handler handler = new Handler();
+//                handler.postDelayed(new Runnable() {
+//                    public void run() {
+//                        setRefreshActionButtonState(false);
+//                    }
+//                }, 2000);
                 // Complete with your code
                 return true;
             case  R.id.add_group: // ADD GROUP
                 showDialogFragment(3,null);
+                return true;
+            case  R.id.action_logout: // LOG OUT
+                logoutTask = new LogoutTask();
+                logoutTask.execute();
                 return true;
             /*case R.id.action_fullscreen:
                 actionBar.setDisplayShowHomeEnabled(false);
@@ -596,9 +652,11 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     public void startProcessGetDevices(){
         // every X seconds getDevicesFromServer
-        getDevicesFromServer();
+        setRefreshActionButtonState(true);
+        getDevicesTask = new GetDevicesTask();
+        getDevicesTask.execute();
 
-        ((UserMapFragment) getFragment(0)).showDevicesInMap(devices);
+        //((UserMapFragment) getFragment(0)).showDevicesInMap(devices);
     }
 
     public void changeToFragment(int position){
@@ -724,24 +782,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         protected com.lluis.onsou.backend.registration.model.Result doInBackground(Void... params) {
             if (regService == null) {
                 Registration.Builder builder;
-                if(false){
-                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(),
-                            new AndroidJsonFactory(), null)
-                            // Need setRootUrl and setGoogleClientRequestInitializer only for local testing,
-                            // otherwise they can be skipped
-                            .setRootUrl("http://192.168.1.4:8080/_ah/api/")
-                            .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
-                                @Override
-                                public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest)
-                                        throws IOException {
-                                    abstractGoogleClientRequest.setDisableGZipContent(true);
-                                }
-                            });
-                    // end of optional local run code
-                }else{
-                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
-                            .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
-                }
+                builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                        .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
                 regService = builder.build();
             }
             try {
@@ -757,20 +799,108 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             super.onPostExecute(result);
             sendMyPositionTask = null;
             if(result.getStatus()){
-                List<Pair<com.lluis.onsou.backend.registration.model.Device,Boolean>> devicesList =
-                        (List<Pair<com.lluis.onsou.backend.registration.model.Device,Boolean>>)result.getObj();
                 devices.clear();
-                for(Pair<com.lluis.onsou.backend.registration.model.Device,Boolean> devicePair : devicesList){
-                    Device d = new Device(devicePair.first.getId(),devicePair.first.getUsername(),
-                            devicePair.first.getLatitude(),devicePair.first.getLongitude(),
-                            devicePair.second,devicePair.first.getOnline());
-                    devices.put(d.getId(),d);
-                }
+                devices = Device.getFromServer((ArrayList)result.getDevices());
+                ((UserMapFragment) getFragment(0)).showDevicesInMap(devices);
+                ((FriendsFragment) getFragment(1)).showDevices(devices);
             }
+            setRefreshActionButtonState(false);
         }
         @Override
         protected void onCancelled() {
             sendMyPositionTask = null;
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////// LogoutTask
+
+    private class LogoutTask extends AsyncTask <Void,Void,Boolean>{
+
+        private Registration regService = null;
+        private Result result;
+
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            if (regService == null) {
+                Registration.Builder builder;
+                builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                        .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
+                regService = builder.build();
+            }
+            try {
+                result = regService.unregister(MyDevice.getInstance().getId()).execute();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                return false;
+            }
+            return result.getStatus();
+        }
+
+        @Override
+        protected void onPostExecute(Boolean aBoolean) {
+            super.onPostExecute(aBoolean);
+            logoutTask = null;
+            if(aBoolean){
+                MyDevice.getInstance().setGCMId("");
+                MyDevice.getInstance().setOnline(false);
+                finish();
+            }else{
+                showToast(getString(R.string.cantLogout));
+            }
+        }
+
+        @Override
+        protected void onCancelled() {
+            logoutTask = null;
+            super.onCancelled();
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////// Thread getDevices
+
+    private class GetDevicesThread extends Thread{
+        private Registration regService = null;
+        private Result result;
+
+        boolean stop = false;
+
+        HashMap <com.lluis.onsou.backend.registration.model.Device,Boolean> devices;
+
+        @Override
+        public void run(){
+            super.run();
+            stop = false;
+            while(!stop){
+                if (regService == null) {
+                    Registration.Builder builder;
+                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                            .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
+                    regService = builder.build();
+                }
+                try {
+                    result = regService.getDevices(MyDevice.getInstance().getId()).execute();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+                if(result.getStatus()){
+                    Message msg = new Message();
+                    msg.obj = Device.getFromServer((ArrayList) result.getDevices());
+                    msg.what = 0;
+                    MainActivity.this.handler.sendMessage(msg);
+                }
+
+                try {
+                    Thread.sleep(10 * 1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        public void goStop(){
+            stop = true;
         }
     }
 }

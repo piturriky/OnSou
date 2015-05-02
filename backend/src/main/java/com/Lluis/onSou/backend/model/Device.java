@@ -4,13 +4,14 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
  * Created by Lluís on 19/03/2015.
  */
 @Entity
-public class Device{
+public class Device implements Serializable{
 
     @Id
     Long id;
@@ -32,16 +33,19 @@ public class Device{
     @Index
     private ArrayList<Long> friendsList = new ArrayList<>();
     @Index
-    private ArrayList<Notification> pendingNotifications = new ArrayList<>();
+    private ArrayList<Long> pendingNotifications = new ArrayList<>();
+
+    private boolean isFriend;
 
     public Device(){}
 
     public Device(String username, String pass) {
         this.username = username;
         this.pass = pass;
+        this.GCMId = "";
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 
@@ -121,7 +125,7 @@ public class Device{
         return pendingNotifications.size() > 0;
     }
 
-    public ArrayList<Notification> pendingNotifications(){
+    public ArrayList<Long> pendingNotifications(){
         return pendingNotifications;
     }
 
@@ -132,7 +136,15 @@ public class Device{
     }
 
     public void addNotification(Notification notification){
-        pendingNotifications.add(notification);
+        pendingNotifications.add(notification.getId());
+    }
+
+    public boolean getIsFriend() {
+        return isFriend;
+    }
+
+    public void setIsFriend(boolean isFriend) {
+        this.isFriend = isFriend;
     }
 
     @Override

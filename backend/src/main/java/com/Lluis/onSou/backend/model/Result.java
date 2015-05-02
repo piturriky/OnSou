@@ -1,6 +1,9 @@
 package com.Lluis.onSou.backend.model;
 
+
+import java.util.ArrayList;
 import java.util.HashMap;
+
 
 /**
  * Created by Lluís on 25/04/2015.
@@ -10,12 +13,16 @@ public class Result {
     private int errorType;
     private String msg;
     private Object obj;
+    private Device device;
+    private ArrayList<Device> devices;
+
 
     public static HashMap<Integer,String> errorTypes = new HashMap<Integer,String>(){{
         put(1,"Invalid username");
         put(2,"Invalid password");
         put(3,"Invalid username, already exist");
         put(4,"Invalid id, device not registered");
+        put(5,"Already Friends!!");
     }};
 
     public Result(){}
@@ -55,4 +62,21 @@ public class Result {
     public void setErrorType(int errorType) {
         this.errorType = errorType;
     }
+
+    public Device getDevice() {
+        return device;
+    }
+
+    public void setDevice(Device device) {
+        this.device = device;
+    }
+
+    public ArrayList<Device> getDevices() {
+        return devices;
+    }
+
+    public void setDevices(ArrayList<Device> devices) {
+        this.devices = devices;
+    }
 }
+

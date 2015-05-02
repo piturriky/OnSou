@@ -56,7 +56,11 @@ public class MessagingEndpoint {
             message = message.substring(0, 1000) + "[...]";
         }
         Sender sender = new Sender(API_KEY);
-        Message msg = new Message.Builder().addData("message", message).build();
+        Message msg = new Message.Builder()
+                .addData("message", message)
+                .addData("type","simpleMessage")
+                .addData("senderNotification","TEST_LLUIS")
+                .build();
         List<Device> devices = ofy().load().type(Device.class).list();
         for (Device device : devices) {
             Result result = sender.send(msg, device.getGCMId(), 5);

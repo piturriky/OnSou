@@ -7,10 +7,7 @@ import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.EditText;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
@@ -23,20 +20,27 @@ import com.udl.lluis.onsou.entities.MyDevice;
 import java.io.IOException;
 
 /**
- * Created by Lluís on 18/03/2015.
+ * Created by Lluís on 21/03/2015.
  */
-public  class AddDeviceDialogFragment extends DialogFragment {
+public class DialogInformation extends DialogFragment {
+
+    private String message;
+    private String type;
+
+    private String senderNotification;
+
+    private ResponseAddDeviceTask responseAddDeviceTask;
 
     /* The activity that creates an instance of this dialog fragment must
  * implement this interface in order to receive event callbacks.
  * Each method passes the DialogFragment in case the host needs to query it. */
+//    public interface ManageFriendsDialogListener {
+//        public void onDialogPositiveClick(DialogFragment dialog);
+//        public void onDialogNegativeClick(DialogFragment dialog);
+//    }
 
     // Use this instance of the interface to deliver action events
-    private FragmentsCommunicationInterface mListener;
-
-    private AddDeviceTask addDeviceTask = null;
-
-    private EditText usernameAddDevice;
+    FragmentsCommunicationInterface mListener;
 
     // Override the Fragment.onAttach() method to instantiate the NoticeDialogListener
     @Override
@@ -59,36 +63,37 @@ public  class AddDeviceDialogFragment extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         // Get the layout inflater
         LayoutInflater inflater = getActivity().getLayoutInflater();
-        View dialogLayout = inflater.inflate(R.layout.add_device_dialog, null);
+
+        message = (String) getArguments().getSerializable("message");
+        type = (String) getArguments().getSerializable("type");
+
+
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout
-        builder.setView(dialogLayout)
-                .setTitle(R.string.addDevice)
-                .setPositiveButton(R.string.add, new DialogInterface.OnClickListener() {
+        builder.setView(inflater.inflate(R.layout.manage_friends_dialog, null))
+                .setTitle("OnSou - Information")
+                .setMessage(message)
+                .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        mListener.onDialogPositiveClick(AddDeviceDialogFragment.this);
+                        mListener.onDialogPositiveClick(DialogInformation.this);
+                        if(type.equals("addFriend")){
 
-                        String username = usernameAddDevice.getText().toString();
-                        if (TextUtils.isEmpty(username)) {
-                            usernameAddDevice.setError(getString(R.string.error_field_required));
-                            usernameAddDevice.requestFocus();
-                        }else{
-                            addDeviceTask = new AddDeviceTask();
-                            addDeviceTask.execute(username);
                         }
                     }
-                })
-                .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        mListener.onDialogNegativeClick(AddDeviceDialogFragment.this);
-                    }
                 });
-        usernameAddDevice = (EditText) dialogLayout.findViewById(R.id.usernameAddDevice);
+        if(type.equals("addFriend")){
+            builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    mListener.onDialogNegativeClick(DialogInformation.this);
+                }
+            });
+        }
         // Create the AlertDialog object and return it
         return builder.create();
     }
 
-    private class AddDeviceTask extends AsyncTask<String,  Void, Result>{
+
+    private class ResponseAddDeviceTask extends AsyncTask<String,  Void, Result> {
         private Registration regService = null;
         @Override
         protected Result doInBackground(String... params) {
@@ -99,7 +104,7 @@ public  class AddDeviceDialogFragment extends DialogFragment {
                 regService = builder.build();
             }
             try {
-                res = regService.addDevice(MyDevice.getInstance().getId(),(String)params[0]).execute();
+                res = regService.acceptFriend(MyDevice.getInstance().getId(),(String)params[0]).execute();
             } catch (IOException e) {
                 e.printStackTrace();
                 return null;
@@ -110,20 +115,18 @@ public  class AddDeviceDialogFragment extends DialogFragment {
         @Override
         protected void onPostExecute(Result result) {
             super.onPostExecute(result);
-            addDeviceTask = null;
+            responseAddDeviceTask = null;
             Bundle bundle = new Bundle();
-            if(result == null){
+            if(result == null || !result.getStatus()){
                 bundle.putSerializable("message",getString(R.string.internal_error));
-            }else{
-                bundle.putSerializable("message",result.getMsg());
+                bundle.putSerializable("type","information");
+                mListener.showDialogFragment(5,bundle);
             }
-            bundle.putSerializable("type","information");
-            mListener.showDialogFragment(5,bundle);
         }
 
         @Override
         protected void onCancelled() {
-            addDeviceTask = null;
+            responseAddDeviceTask = null;
             super.onCancelled();
         }
     }

@@ -1,13 +1,13 @@
 <resources>
     <string name="app_name">OnSou</string>
+    <string name="title_activity_main">OnSou</string>
 
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="add">Add</string>
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
-
-
+    <string name="ok">Ok</string>
 
     <!-- ACTION BAR -->
     <string name="action_settings">Settings</string>
@@ -16,34 +16,34 @@
     <string name="action_refresh">Refresh</string>
     <string name="add_device">Add device</string>
     <string name="add_group">Create Group</string>
-
-
-
-
-    <string name="title_activity_main">OnSou</string>
-
+    <string name="action_logout">Log out</string>
 
     <!-- ACTIVITY MAIN -->
     <string name="title_activity_maps_activity_main">Map</string>
 
     <!-- TABS -->
-    <string name="title_section1">Mapa</string>
-    <string name="title_section2">Amics</string>
-    <string name="title_section3">Grups</string>
+    <string name="title_section1">Map</string>
+    <string name="title_section2">Friends</string>
+    <string name="title_section3">Groups</string>
 
     <!-- DIALOG -->
     <string name="addDevice">Add User Friend</string>
     <string name="username">Username</string>
     <string name="groupname">Group name</string>
 
-
     <!-- FRIENDS TAB -->
     <string name="online">On-Line</string>
     <string name="offline">Off-Line</string>
 
+    <!-- NOTIFICATIONS -->
+    <string name="addFriend">User %1$s wants to add as friend</string>
+
+    <string name="cantLogout">Logout error.</string>
+    <string name="internal_error">Internal application error</string>
 
     <string name="search_hint">search_hint</string>
     <string name="app_label">app_label</string>
+
 
 
 </resources>

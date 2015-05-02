@@ -9,10 +9,12 @@ public class MyDevice {
 
     private static MyDevice instance;
 
-    private long id;
-    private String GCMId;
-    private String name;
+    private Long id = Long.MIN_VALUE;
+    private String GCMId = "";
+    private String name = "";
     private LatLng position;
+
+    private boolean isOnline = false;
 
     private MyDevice(){
     }
@@ -36,7 +38,7 @@ public class MyDevice {
         return position;
     }
 
-    public void setId(long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -54,5 +56,13 @@ public class MyDevice {
 
     public void setGCMId(String GCMId) {
         this.GCMId = GCMId;
+    }
+
+    public boolean isOnline() {
+        return isOnline && id != null && GCMId !="";
+    }
+
+    public void setOnline(boolean isOnline) {
+        this.isOnline = isOnline;
     }
 }

@@ -4,6 +4,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Created by Lluís on 19/03/2015.
@@ -67,6 +69,18 @@ public class Device implements Serializable {
 
     public void setMarker(Marker marker) {
         this.marker = marker;
+    }
+
+
+    public static HashMap<Long, Device> getFromServer(ArrayList<com.lluis.onsou.backend.registration.model.Device> devices){
+        HashMap<Long,Device> res = new HashMap<>();
+        for(com.lluis.onsou.backend.registration.model.Device device : devices){
+            if(device.getId().compareTo(MyDevice.getInstance().getId())!=0){
+                Device d = new Device(device.getId(),device.getUsername(),device.getLatitude(),device.getLongitude(),device.getIsFriend(),device.getOnline());
+                res.put(d.getId(),d);
+            }
+        }
+        return res;
     }
 
     @Override

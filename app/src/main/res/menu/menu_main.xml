@@ -23,14 +23,16 @@
         android:icon="@drawable/ic_action_name"
         android:orderInCategory="100"
         app:showAsAction="ifRoom" />
-
-
     <item android:id="@+id/add_group"
         android:title="@string/add_group"
         android:icon="@drawable/ic_action_new_atachment"
         app:showAsAction="never" />
     <item android:id="@+id/action_settings"
         android:title="@string/action_settings"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+    <item android:id="@+id/action_logout"
+        android:title="@string/action_logout"
         android:orderInCategory="100"
         app:showAsAction="never" />
 
