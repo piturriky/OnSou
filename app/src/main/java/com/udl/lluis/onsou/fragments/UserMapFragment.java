@@ -23,8 +23,12 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.udl.lluis.onsou.FragmentsCommunicationInterface;
+import com.udl.lluis.onsou.Globals;
 import com.udl.lluis.onsou.R;
 import com.udl.lluis.onsou.entities.Device;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,15 +44,7 @@ import java.util.Scanner;
  * Created by Lluís on 17/03/2015.
  */
 public class UserMapFragment extends Fragment implements Serializable {
-    /**
-     * The fragment argument representing the section number for this
-     * fragment.
-     */
-    private static final String ARG_SECTION_NUMBER = "SECTION_TAG";
 
-    private static String URL_BARS = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s&radius=%s&types=%s&sensor=true&key=%s";
-
-    //private FragmentActivity context;
     private FragmentsCommunicationInterface mCallback;
 
     private SharedPreferences myPreference;
@@ -57,6 +53,7 @@ public class UserMapFragment extends Fragment implements Serializable {
     private MapView mapView;
 
     private HashMap<Long,Device> devices;
+    private ArrayList<Place> placesList;
 
     private static UserMapFragment fragment;
 
@@ -67,10 +64,10 @@ public class UserMapFragment extends Fragment implements Serializable {
      * number.
      */
     public static UserMapFragment newInstance(int sectionNumber) {
-        Log.e("------------>", "FRAGMENT NEW INSTANCE");
+        Log.e(Globals.TAG, "FRAGMENT NEW INSTANCE");
         fragment = new UserMapFragment();
         Bundle args = new Bundle();
-        args.putInt(ARG_SECTION_NUMBER, sectionNumber);
+        args.putInt(Globals.ARG_SECTION_NUMBER, sectionNumber);
         fragment.setArguments(args);
         return fragment;
     }
@@ -81,17 +78,18 @@ public class UserMapFragment extends Fragment implements Serializable {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.e("------------>", "FRAGMENT ON CREATE");
+        Log.e(Globals.TAG, "FRAGMENT ON CREATE");
         setRetainInstance(true);
 
         myPreference = PreferenceManager.getDefaultSharedPreferences(getActivity());
         devices = new HashMap<Long,Device>();
+        placesList = new ArrayList<Place>();
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        Log.e("------------>", "FRAGMENT ON CREATE VIEW");
+        Log.e(Globals.TAG, "FRAGMENT ON CREATE VIEW");
         View inflatedView = inflater.inflate(R.layout.map_view_fragment, container, false);
         mapView = (MapView) inflatedView.findViewById(R.id.mapview);
         mapView.onCreate(savedInstanceState);
@@ -106,7 +104,7 @@ public class UserMapFragment extends Fragment implements Serializable {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        Log.e("------------>", "FRAGMENT ONACTIVITYCREATED");
+        Log.e(Globals.TAG, "FRAGMENT ONACTIVITYCREATED");
         //showDevicesInMap(mCallback.getDevices());
         if(mCallback.getFragment(0)==null)mCallback.setFragment(fragment,0);
         mCallback.startProcessGetDevices();
@@ -119,8 +117,9 @@ public class UserMapFragment extends Fragment implements Serializable {
 
     @Override
     public void onResume() {
-        Log.e("------------>", "FRAGMENT ONRESUME");
+        Log.e(Globals.TAG, "FRAGMENT ONRESUME");
         initializeMap();
+        if(devices!=null)showDevicesInMap(devices);
         super.onResume();
     }
 
@@ -153,9 +152,6 @@ public class UserMapFragment extends Fragment implements Serializable {
             boolean buildings = myPreference.getBoolean("buildings_map_checkbox",true);
             mMap.setBuildingsEnabled(buildings);
 
-            // Show hospitals
-            boolean hospitals = myPreference.getBoolean("show_hospitals",false);
-
             // Try center map on my device
             Location myLoc = mMap.getMyLocation();
             LatLng myLatlon;
@@ -171,12 +167,13 @@ public class UserMapFragment extends Fragment implements Serializable {
 
             // Show restaurants
             boolean bars = myPreference.getBoolean("show_bars",false);
+            placesList.clear();
             if(bars && myLatlon != null){
                 String location = Double.toString(myLatlon.latitude) + "," + Double.toString(myLatlon.longitude);
                 String radius = myPreference.getString("places_dist_list","1");
-                String types = "bar,cafe,food,restaurant";
+                String types = "bar|cafe|food|restaurant";
                 String key = getString(R.string.server_key);
-                String url = String.format(URL_BARS,location,radius,types,key);
+                String url = String.format(Globals.URL_BARS,location,radius,types,key);
 
                 showBarsTask = new ShowBarsTask();
                 showBarsTask.execute(url );
@@ -219,7 +216,7 @@ public class UserMapFragment extends Fragment implements Serializable {
     }
 
     public void showDevicesInMap(HashMap devices){
-        Log.e("------------>", "SHOW DEVICES IN MAP");
+        Log.e(Globals.TAG, "SHOW DEVICES IN MAP");
         /*Drawable dd = getResources().getDrawable(R.drawable.ic_action_person);
         // Get the color of the icon depending on system state
         int iconColor = android.graphics.Color.BLACK;
@@ -261,6 +258,23 @@ public class UserMapFragment extends Fragment implements Serializable {
                     deviceMarkers.get(d.getId()).remove();
                 }*/
             }
+            showPlaces();
+        }
+    }
+
+    private void showPlaces(){
+        for(Place place : placesList){
+            MarkerOptions marker = new MarkerOptions()
+                    .position(new LatLng(place.getLatitude(),place.getLongitude()))
+                    .snippet(place.getName());
+            if(place.getTypes().contains("restaurant")){
+                marker.title(getString(R.string.restaurant))
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.cafe));
+            }else{
+                marker.title(getString(R.string.cafe))
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.restaurant));
+            }
+            mMap.addMarker(marker);
         }
     }
 
@@ -290,7 +304,8 @@ public class UserMapFragment extends Fragment implements Serializable {
             if(result == null){
 
             }else{
-                ArrayList list = parseJSON(result);
+                placesList = parseJSON(result);
+                showPlaces();
             }
 
         }
@@ -328,22 +343,96 @@ public class UserMapFragment extends Fragment implements Serializable {
     }
 
     private String readIt(InputStream is) throws IOException {
-
-//        StringWriter writer = new StringWriter();
-//        IOUtils.copy(is,writer);
-
         Scanner s = new Scanner(is).useDelimiter("\\A");
         return s.hasNext() ? s.next() : "";
-
-//        Reader reader = null;
-//        char [] buffer = new char[Integer.MAX_VALUE];
-//        reader.read(buffer);
-//        return new String(buffer);
     }
 
-    private ArrayList parseJSON(final String response){
+    private ArrayList <Place> parseJSON(final String response){ //TODO next_page_token
+        ArrayList temp = new ArrayList();
+        try{
+            JSONObject jsonObject = new JSONObject(response);
 
-        return null;
+            if(jsonObject.has("results")){
+                JSONArray jsonArray = jsonObject.getJSONArray("results");
+
+                for(int i = 0; i < jsonArray.length(); i++){
+                    Place place = new Place();
+                    if(jsonArray.getJSONObject(i).has("name")){
+                        place.setName(jsonArray.getJSONObject(i).optString("name"));
+                        if(jsonArray.getJSONObject(i).has("geometry")){
+                            if(jsonArray.getJSONObject(i).getJSONObject("geometry").has("location")){
+                                if(jsonArray.getJSONObject(i).getJSONObject("geometry").getJSONObject("location").has("lat")){
+                                    place.setLatitude(jsonArray.getJSONObject(i).getJSONObject("geometry").getJSONObject("location").optDouble("lat"));
+                                }
+                                if(jsonArray.getJSONObject(i).getJSONObject("geometry").getJSONObject("location").has("lng")){
+                                    place.setLongitude(jsonArray.getJSONObject(i).getJSONObject("geometry").getJSONObject("location").optDouble("lng"));
+                                }
+                            }
+                            if(jsonArray.getJSONObject(i).has("types")){
+                                JSONArray typesArray = jsonArray.getJSONObject(i).getJSONArray("types");
+                                for(int j = 0; j < typesArray.length(); j++){
+                                    place.addTypes(typesArray.getString(j));
+                                }
+                            }
+                        }
+                    }
+                    if(place.isComplete()){
+                        temp.add(place);
+                    }
+                }
+            }
+        }catch (Exception e){
+            return new ArrayList<>();
+        }
+        return temp;
     }
 
+    private class Place{
+        String name;
+        Double latitude;
+        Double longitude;
+
+        ArrayList <String> types = new ArrayList<>();
+
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public Double getLatitude() {
+            return latitude;
+        }
+
+        public void setLatitude(Double latitude) {
+            this.latitude = latitude;
+        }
+
+        public Double getLongitude() {
+            return longitude;
+        }
+
+        public void setLongitude(Double longitude) {
+            this.longitude = longitude;
+        }
+
+        public ArrayList <String> getTypes() {
+            return types;
+        }
+
+        public void setTypes(ArrayList <String> types) {
+            this.types = types;
+        }
+
+        public void addTypes(String s){
+            types.add(s);
+        }
+
+        public boolean isComplete(){
+            return this.name != null && !this.name.isEmpty() && !this.types.isEmpty() && this.latitude != null && this.longitude != null;
+        }
+    }
 }

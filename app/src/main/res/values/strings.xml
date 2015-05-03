@@ -41,6 +41,9 @@
     <!-- PREFERENCES -->
 
 
+    <string name="restaurant">Restaurant</string>
+    <string name="cafe">Cafe</string>
+
     <string name="cantLogout">Logout error.</string>
     <string name="internal_error">Internal application error</string>
 

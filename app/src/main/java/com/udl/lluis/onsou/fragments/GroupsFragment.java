@@ -10,8 +10,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.BaseExpandableListAdapter;
-import android.widget.ExpandableListAdapter;
-import android.widget.ExpandableListView;
 import android.widget.TextView;
 
 import com.udl.lluis.onsou.R;
@@ -56,37 +54,37 @@ public class GroupsFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.groups_fragment, container, false);
 
 
-        ExpandableListAdapter mAdapter;
-        ExpandableListView epView = (ExpandableListView) rootView.findViewById(R.id.expandableListViewGroups);
-        mAdapter = new MyExpandableListAdapter();
-        epView.setAdapter(mAdapter);
-
-        epView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
-            @Override
-            public boolean onGroupClick(ExpandableListView arg0, View arg1,
-                                        int groupPosition, long arg3) {
-                if (groupPosition == 5) {
-
-                }
-
-                // Aqui podriamos cambiar si quisieramos el comportamiento de apertura y cierre de las listas explandibles mediante los metodos collapseGroup(int groupPos) y expandGroup(int groupPos)
-
-                return false;
-            }
-        });
-
-        epView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
-            @Override
-            public boolean onChildClick(ExpandableListView parent,
-                                        View v, int groupPosition, int childPosition,
-                                        long id) {
-                if (groupPosition == 0 && childPosition == 0) {
-
-                }
-
-                return false;
-            }
-        });
+//        ExpandableListAdapter mAdapter;
+//        ExpandableListView epView = (ExpandableListView) rootView.findViewById(R.id.expandableListViewGroups);
+//        mAdapter = new MyExpandableListAdapter();
+//        epView.setAdapter(mAdapter);
+//
+//        epView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
+//            @Override
+//            public boolean onGroupClick(ExpandableListView arg0, View arg1,
+//                                        int groupPosition, long arg3) {
+//                if (groupPosition == 5) {
+//
+//                }
+//
+//                // Aqui podriamos cambiar si quisieramos el comportamiento de apertura y cierre de las listas explandibles mediante los metodos collapseGroup(int groupPos) y expandGroup(int groupPos)
+//
+//                return false;
+//            }
+//        });
+//
+//        epView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+//            @Override
+//            public boolean onChildClick(ExpandableListView parent,
+//                                        View v, int groupPosition, int childPosition,
+//                                        long id) {
+//                if (groupPosition == 0 && childPosition == 0) {
+//
+//                }
+//
+//                return false;
+//            }
+//        });
 
         return rootView;
     }

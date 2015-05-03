@@ -6,7 +6,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.AbstractCursor;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -27,7 +26,6 @@ import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.SearchView;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -39,7 +37,6 @@ import com.google.api.client.extensions.android.json.AndroidJsonFactory;
 import com.lluis.onsou.backend.registration.Registration;
 import com.lluis.onsou.backend.registration.model.Result;
 import com.udl.lluis.onsou.entities.Device;
-import com.udl.lluis.onsou.entities.Group;
 import com.udl.lluis.onsou.entities.MyDevice;
 import com.udl.lluis.onsou.fragments.AddDeviceDialogFragment;
 import com.udl.lluis.onsou.fragments.AddGroupDialogFragment;
@@ -52,7 +49,6 @@ import com.udl.lluis.onsou.fragments.UserMapFragment;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -91,6 +87,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     private GetDevicesTask getDevicesTask = null;
     private LogoutTask logoutTask = null;
 
+    private static List<Address> addressList;
+    private static List<String> addressListString;
 
     // Devices
     private static HashMap<Long,Device> devices;
@@ -100,7 +98,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
-        Log.e("------------>", "ACTIVITY ONCREATE");
+        Log.e(Globals.TAG, "ACTIVITY ONCREATE");
         setContentView(R.layout.activity_main);
 
         if(savedInstanceState != null){
@@ -184,17 +182,17 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
             @Override
             public void onStatusChanged(String provider, int status, Bundle extras) {
-                showToast("Provider " + provider + " Status: " + status);
+                //showToast("Provider " + provider + " Status: " + status);
             }
 
             @Override
             public void onProviderEnabled(String provider) {
-                showToast( "Provider "+ provider +" ON");
+                //showToast( "Provider "+ provider +" ON");
             }
 
             @Override
             public void onProviderDisabled(String provider) {
-                showToast("Provider "+ provider +" OFF");
+                //showToast("Provider "+ provider +" OFF");
             }
         };
 
@@ -209,7 +207,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        Log.e("------------>", "ACTIVITY ONSAVEINSTANCESTATE");
+        Log.e(Globals.TAG, "ACTIVITY ONSAVEINSTANCESTATE");
         outState.putSerializable("devicesMap",devices);
 //        outState.putSerializable("fragmentsMap", fragmentsMap);
     }
@@ -231,7 +229,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         super.onResume();
         //Nos registramos para recibir actualizaciones de la posición
         locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, locListener);
-        Log.e("------------>", "ACTIVITY ONRESUME");
+        Log.e(Globals.TAG, "ACTIVITY ONRESUME");
     }
 
     @Override
@@ -252,26 +250,26 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 //        }
 //    }
 
-    private List<Device> getSimulatedDevices(){
-        List<Device> list = new ArrayList<Device>(){{
-            add(new Device(new Long(1000),"Simulation Friend 1",new LatLng(41.69,0.64),true,true));
-            add(new Device(new Long(2000),"Simulation No Friend 2",new LatLng(41.96,0.65),false,true));
-            add(new Device(new Long(3000),"Simulation Friend 3",new LatLng(41.716,0.66),true,true));
-            add(new Device(new Long(4000),"Simulation No Online Friend 4",new LatLng(41.616,0.68),true,false));
-        }};
-        return list;
-    }
+//    private List<Device> getSimulatedDevices(){
+//        List<Device> list = new ArrayList<Device>(){{
+//            add(new Device(new Long(1000),"Simulation Friend 1",new LatLng(41.69,0.64),true,true));
+//            add(new Device(new Long(2000),"Simulation No Friend 2",new LatLng(41.96,0.65),false,true));
+//            add(new Device(new Long(3000),"Simulation Friend 3",new LatLng(41.716,0.66),true,true));
+//            add(new Device(new Long(4000),"Simulation No Online Friend 4",new LatLng(41.616,0.68),true,false));
+//        }};
+//        return list;
+//    }
 
-    private List <Group> getSimulatedGroups(){
-        final List devices = getSimulatedDevices();
-
-        Group g1 = new Group("Simulated Group 1", new Color());
-
-        List<Group> list = new ArrayList<Group>(){{
-            add(new Group("Simulated Group 1", new Color()));
-        }};
-        return list;
-    }
+//    private List <Group> getSimulatedGroups(){
+//        final List devices = getSimulatedDevices();
+//
+//        Group g1 = new Group("Simulated Group 1", new Color());
+//
+//        List<Group> list = new ArrayList<Group>(){{
+//            add(new Group("Simulated Group 1", new Color()));
+//        }};
+//        return list;
+//    }
 
     public void showDialogFragment(int type, Bundle bundle){
         switch (type){
@@ -328,7 +326,9 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             @Override
             public boolean onSuggestionClick(int position)
             {
-                Toast.makeText(MainActivity.this, "Position: " + position, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MainActivity.this, "Position: " + position, Toast.LENGTH_SHORT).show();
+                searchView.setQuery(addressListString.get(position),false);
+                ((UserMapFragment)getFragment(0)).centerMapOnPosition(new LatLng(addressList.get(position).getLatitude(),addressList.get(position).getLongitude()));
                 searchView.clearFocus();
                 return true;
             }
@@ -344,7 +344,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             @Override
             public boolean onQueryTextSubmit(String query)
             {
-                Toast.makeText(MainActivity.this, query, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MainActivity.this, query, Toast.LENGTH_SHORT).show();
+                if(addressList != null && addressList.size() > 0)((UserMapFragment)getFragment(0)).centerMapOnPosition(new LatLng(addressList.get(0).getLatitude(),addressList.get(0).getLongitude()));
                 searchView.clearFocus();
                 return true;
             }
@@ -370,18 +371,18 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         });*/
         return true;
     }
-     private static ArrayList<String> test(String s){
-         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
-         ArrayList<String> list = new ArrayList<>();
-         try {
-            for(Address a : geocoder.getFromLocationName(s,10)){
-                list.add(a.getAddressLine(1));
-            }
-         } catch (IOException e) {
-             e.printStackTrace();
-         }
-         return list;
-     }
+//     private static ArrayList<String> test(String s){
+//         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+//         ArrayList<String> list = new ArrayList<>();
+//         try {
+//            for(Address a : geocoder.getFromLocationName(s,10)){
+//                list.add(a.getAddressLine(1));
+//            }
+//         } catch (IOException e) {
+//             e.printStackTrace();
+//         }
+//         return list;
+//     }
 
     public static class SearchSuggestionsAdapter extends SimpleCursorAdapter{
         private static final String[] mFields  = { "_id", "result" };
@@ -407,31 +408,37 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                 try {
                     List<Address> addressList = geocoder.getFromLocationName(constraint.toString(),10);
+
                     mResults = new ArrayList<String>(addressList.size());
                     for(Address a : addressList){
-
-                        mResults.add(a.toString());
-                        Log.e("---->",a.toString());
+                        String ad = "";
+                        for(int i = 0; i<a.getMaxAddressLineIndex(); i++){
+                            ad += a.getAddressLine(i);
+                        }
+                        mResults.add(ad);
+                        Log.e(Globals.TAG,a.toString());
                     }
+                    MainActivity.addressList = addressList;
+                    MainActivity.addressListString = mResults;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
 
-
-                final int count = 100;
+                ;
+//                final int count = 100;
 //                mResults = test(constraint.toString());//new ArrayList<String>(count);
 //                for (int i = 0; i < count; i++) {
 //                    mResults.add(constraint.toString());
 //                }
-                if (!TextUtils.isEmpty(constraint)) {
-                    String constraintString = constraint.toString().toLowerCase(Locale.ROOT);
-                    Iterator<String> iter = mResults.iterator();
-                    while (iter.hasNext()) {
-                        if (!iter.next().toLowerCase(Locale.ROOT).startsWith(constraintString)) {
-                            iter.remove();
-                        }
-                    }
-                }
+//                if (!TextUtils.isEmpty(constraint)) {
+//                    String constraintString = constraint.toString().toLowerCase(Locale.ROOT);
+//                    Iterator<String> iter = mResults.iterator();
+//                    while (iter.hasNext()) {
+//                        if (!iter.next().toLowerCase(Locale.ROOT).startsWith(constraintString)) {
+//                            iter.remove();
+//                        }
+//                    }
+//                }
             }
 
             @Override

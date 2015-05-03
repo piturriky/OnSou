@@ -46,17 +46,7 @@ import java.util.Locale;
  */
 public class LoginActivity extends Activity{
 
-    private static String TAG = "ONSOU:::::::::::";
 
-    private static final String PROPERTY_REG_ID = "registration_id";
-    private static final String PROPERTY_APP_VERSION = "appVersion";
-    private static final String PROPERTY_EXPIRATION_TIME = "onServerExpirationTimeMs";
-    private static final String PROPERTY_USER = "user";
-
-    private static final int EXPIRATION_TIME_MS = 1000 * 3600 * 24 * 7;
-    private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
-
-    private static final String SENDER_ID = "930427914417";
 
     private LoginActivity loginActivity = this;
     /**
@@ -118,7 +108,7 @@ public class LoginActivity extends Activity{
     protected void onResume()
     {
         super.onResume();
-        Log.e(TAG,"ONRESUME");
+        Log.e(Globals.TAG,"ONRESUME");
         checkPlayServices();
         if(MyDevice.getInstance().isOnline()){
             startMainActivity();
@@ -363,7 +353,7 @@ public class LoginActivity extends Activity{
                         }
 
                         //Nos registramos en los servidores de GCM
-                        regid = gcm.register(SENDER_ID);
+                        regid = gcm.register(Globals.SENDER_ID);
                         MyDevice.getInstance().setGCMId(regid);
                         Log.d("--->", "Registrado en GCM: registration_id=" + regid);
                     }
@@ -424,7 +414,7 @@ public class LoginActivity extends Activity{
         if (resultCode != ConnectionResult.SUCCESS){
             if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)){
                 GooglePlayServicesUtil.getErrorDialog(resultCode, this,
-                        PLAY_SERVICES_RESOLUTION_REQUEST).show();
+                        Globals.PLAY_SERVICES_RESOLUTION_REQUEST).show();
             }else{
                 Log.i("--->", "Dispositivo no soportado.");
                 finish();
@@ -439,7 +429,7 @@ public class LoginActivity extends Activity{
                 MainActivity.class.getSimpleName(),
                 Context.MODE_PRIVATE);
 
-        String registrationId = prefs.getString(PROPERTY_REG_ID, "");
+        String registrationId = prefs.getString(Globals.PROPERTY_REG_ID, "");
 
         if (registrationId.length() == 0){
             Log.d("-->", "Registro GCM no encontrado.");
@@ -447,13 +437,13 @@ public class LoginActivity extends Activity{
         }
 
         String registeredUser =
-                prefs.getString(PROPERTY_USER, "user");
+                prefs.getString(Globals.PROPERTY_USER, "user");
 
         int registeredVersion =
-                prefs.getInt(PROPERTY_APP_VERSION, Integer.MIN_VALUE);
+                prefs.getInt(Globals.PROPERTY_APP_VERSION, Integer.MIN_VALUE);
 
         long expirationTime =
-                prefs.getLong(PROPERTY_EXPIRATION_TIME, -1);
+                prefs.getLong(Globals.PROPERTY_EXPIRATION_TIME, -1);
 
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
         String expirationDate = sdf.format(new Date(expirationTime));
@@ -498,11 +488,11 @@ public class LoginActivity extends Activity{
         int appVersion = getAppVersion(context);
 
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(PROPERTY_USER, user);
-        editor.putString(PROPERTY_REG_ID, regId);
-        editor.putInt(PROPERTY_APP_VERSION, appVersion);
-        editor.putLong(PROPERTY_EXPIRATION_TIME,
-                System.currentTimeMillis() + EXPIRATION_TIME_MS);
+        editor.putString(Globals.PROPERTY_USER, user);
+        editor.putString(Globals.PROPERTY_REG_ID, regId);
+        editor.putInt(Globals.PROPERTY_APP_VERSION, appVersion);
+        editor.putLong(Globals.PROPERTY_EXPIRATION_TIME,
+                System.currentTimeMillis() + Globals.EXPIRATION_TIME_MS);
 
         editor.commit();
     }

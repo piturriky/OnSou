@@ -139,6 +139,8 @@ public class FriendsFragment extends Fragment {
     }
 
     public void showDevices(Map devices){
+        devicesOnLineList.clear();
+        devicesOffLineList.clear();
         for(Device d : new ArrayList<Device>(devices.values())){
             if (d.isFriend()){
                 if(d.isOnline()){
