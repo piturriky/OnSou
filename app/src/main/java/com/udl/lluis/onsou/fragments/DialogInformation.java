@@ -77,7 +77,8 @@ public class DialogInformation extends DialogFragment {
                     public void onClick(DialogInterface dialog, int id) {
                         mListener.onDialogPositiveClick(DialogInformation.this);
                         if(type.equals("addFriend")){
-
+                            responseAddDeviceTask = new ResponseAddDeviceTask();
+                            responseAddDeviceTask.execute((String)getArguments().getSerializable("senderNotification"));
                         }
                     }
                 });

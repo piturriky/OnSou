@@ -30,8 +30,6 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
-import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
-import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
 import com.lluis.onsou.backend.registration.Registration;
 import com.lluis.onsou.backend.registration.model.Result;
 import com.udl.lluis.onsou.entities.MyDevice;
@@ -262,24 +260,10 @@ public class LoginActivity extends Activity{
             type = (String) params[0];
             if (regService == null) {
                 Registration.Builder builder;
-                if(false){
-                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(),
-                            new AndroidJsonFactory(), null)
-                            // Need setRootUrl and setGoogleClientRequestInitializer only for local testing,
-                            // otherwise they can be skipped
-                            .setRootUrl("http://192.168.1.4:8080/_ah/api/")
-                            .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
-                                @Override
-                                public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest)
-                                        throws IOException {
-                                    abstractGoogleClientRequest.setDisableGZipContent(true);
-                                }
-                            });
-                    // end of optional local run code
-                }else{
-                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
-                            .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
-                }
+
+                builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                        .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
+
                 regService = builder.build();
             }
 
@@ -357,26 +341,10 @@ public class LoginActivity extends Activity{
         @Override
         protected Boolean doInBackground(Void... params) {
             if (regService == null) {
-                if(false){ // TODO
-                    Registration.Builder builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(),
-                            new AndroidJsonFactory(), null)
-                            // Need setRootUrl and setGoogleClientRequestInitializer only for local testing,
-                            // otherwise they can be skipped
-                            .setRootUrl("http://192.168.1.4:8080/_ah/api/")
-                            .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
-                                @Override
-                                public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest)
-                                        throws IOException {
-                                    abstractGoogleClientRequest.setDisableGZipContent(true);
-                                }
-                            });
-                    // end of optional local run code
-                }else{
-                    Registration.Builder builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
-                            .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
+                Registration.Builder builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                        .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
 
-                    regService = builder.build();
-                }
+                regService = builder.build();
             }
 
             //Chequemos si está instalado Google Play Services
@@ -402,20 +370,21 @@ public class LoginActivity extends Activity{
                     catch (IOException ex){
                         Log.d("--->", "Error registro en GCM:" + ex.getMessage());
                     }
-                    try {
-                        Result res = regService.registerGCMId(mUserName, mPassword,regid).execute();
-                        if (!res.getStatus()){
-                            return false;
-                        }
-                        //Guardamos los datos del registro
-                        setRegistrationId(context, mUserName, regid);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
                 }
             }else{
                 Log.i("--->", "No se ha encontrado Google Play Services.");
                 return false;
+            }
+
+            try {
+                Result res = regService.registerGCMId(mUserName, mPassword,regid).execute();
+                if (!res.getStatus()){
+                    return false;
+                }
+                //Guardamos los datos del registro
+                setRegistrationId(context, mUserName, regid);
+            } catch (IOException ex) {
+                ex.printStackTrace();
             }
 
             MyDevice.getInstance().setGCMId(regid);

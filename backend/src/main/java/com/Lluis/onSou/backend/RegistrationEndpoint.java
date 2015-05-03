@@ -8,6 +8,7 @@ package com.Lluis.onSou.backend;
 
 import com.Lluis.onSou.backend.model.AddFriendNotification;
 import com.Lluis.onSou.backend.model.Device;
+import com.Lluis.onSou.backend.model.Notification;
 import com.Lluis.onSou.backend.model.Result;
 import com.google.android.gcm.server.Constants;
 import com.google.android.gcm.server.Message;
@@ -83,10 +84,6 @@ public class RegistrationEndpoint {
             ofy().save().entity(device).now();
             res.setStatus(true);
             res.setDevice(device);
-            if(device.hasPendingNotifications()){
-                Thread t = new SendPendingNotificationsThread(device);
-                t.run();
-            }
         }
         return res;
     }
@@ -107,6 +104,20 @@ public class RegistrationEndpoint {
             device.setGCMId(regId);
             ofy().save().entity(device).now();
             res.setStatus(true);
+            if(device.hasPendingNotifications()){
+//                Thread t = new SendPendingNotificationsThread(device);
+//                t.run();
+                for(Long notificationId : device.pendingNotifications()){
+                    Notification not = findNotification(notificationId);
+                    if(not != null && not instanceof AddFriendNotification){
+                        if(sendAddFriendNotification((AddFriendNotification)not)){
+                            device.removeNotification(not);
+                            ofy().delete().entity(not).now();
+                            ofy().save().entity(device).now();
+                        }
+                    }
+                }
+            }
         }
         return res;
     }
@@ -198,11 +209,16 @@ public class RegistrationEndpoint {
             result.setStatus(false);
             result.setErrorType(5);
             result.setMsg(Result.errorTypes.get(5));
+        }else if(device.getId().compareTo(friendDevice.getId()) == 0){
+            result.setStatus(false);
+            result.setErrorType(6);
+            result.setMsg(Result.errorTypes.get(6));
         }else{
             AddFriendNotification notification = new AddFriendNotification(id,friendDevice.getId());
             if(friendDevice.isOnline()){
                 sendAddFriendNotification(notification);
             }else{
+                ofy().save().entity(notification).now();
                 friendDevice.addNotification(notification);
                 ofy().save().entity(friendDevice).now();
             }
@@ -255,7 +271,7 @@ public class RegistrationEndpoint {
         Device from = findDevice(notification.getSender());
 
         Message msg = new Message.Builder()
-                .addData("type", "addFriendNotification")
+                .addData("type", "addFriend")
                 .addData("senderNotification", from.getUsername())
                 .build();
         try {
@@ -335,6 +351,10 @@ public class RegistrationEndpoint {
         return ofy().load().type(RegistrationRecord.class).filter("regId", regId).first().now();
     }
 
+    private AddFriendNotification findNotification(long id){
+        return ofy().load().type(AddFriendNotification.class).filter("id", id).first().now();
+    }
+
     private Device findDevice(long id){
         return ofy().load().type(Device.class).filter("id", id).first().now();
     }
@@ -355,13 +375,14 @@ public class RegistrationEndpoint {
         @Override
         public void run() {
             super.run();
-//            for(Notification not : device.pendingNotifications()){
-//                if(not instanceof AddFriendNotification){
-//                    if(sendAddFriendNotification((AddFriendNotification)not)){
-//                        device.removeNotification(not);
-//                    }
-//                }
-//            }
+            for(Long notificationId : device.pendingNotifications()){
+                Notification not = findNotification(notificationId);
+                if(not != null && not instanceof AddFriendNotification){
+                    if(sendAddFriendNotification((AddFriendNotification)not)){
+                        device.removeNotification(not);
+                    }
+                }
+            }
         }
     }
 }

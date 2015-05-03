@@ -101,10 +101,16 @@ public class SettingsActivity extends PreferenceActivity {
         // Add 'general' preferences.
         addPreferencesFromResource(R.xml.pref_general);
 
-        // Add 'notifications' preferences, and a corresponding header.
+        // Add 'places' preferences
         PreferenceCategory fakeHeader = new PreferenceCategory(this);
-        fakeHeader.setTitle(R.string.pref_header_notifications);
+        fakeHeader.setTitle(R.string.pref_header_places);
         getPreferenceScreen().addPreference(fakeHeader);
+        addPreferencesFromResource(R.xml.pref_places);
+
+        // Add 'notifications' preferences, and a corresponding header.
+        PreferenceCategory fakeHeader1 = new PreferenceCategory(this);
+        fakeHeader1.setTitle(R.string.pref_header_notifications);
+        getPreferenceScreen().addPreference(fakeHeader1);
         addPreferencesFromResource(R.xml.pref_notification);
 
         // Add 'data and sync' preferences, and a corresponding header.
@@ -119,6 +125,7 @@ public class SettingsActivity extends PreferenceActivity {
         bindPreferenceSummaryToValue(findPreference("display_name"));
 
         bindPreferenceSummaryToValue(findPreference("map_type_list"));
+        bindPreferenceSummaryToValue(findPreference("places_dist_list"));
 
         bindPreferenceSummaryToValue(findPreference("notifications_new_message_ringtone"));
         bindPreferenceSummaryToValue(findPreference("sync_frequency"));

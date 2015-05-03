@@ -23,6 +23,7 @@ public class Result {
         put(3,"Invalid username, already exist");
         put(4,"Invalid id, device not registered");
         put(5,"Already Friends!!");
+        put(6,"You are this user!!");
     }};
 
     public Result(){}

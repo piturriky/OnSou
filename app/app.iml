@@ -99,7 +99,6 @@
     <orderEntry type="library" exported="" name="google-oauth-client-1.19.0" level="project" />
     <orderEntry type="library" exported="" name="guava-jdk5-13.0" level="project" />
     <orderEntry type="library" exported="" name="google-api-client-1.19.0" level="project" />
-    <orderEntry type="module" module-name="backend" />
   </component>
 </module>
 

@@ -36,8 +36,6 @@ import android.widget.Toast;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
-import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
-import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
 import com.lluis.onsou.backend.registration.Registration;
 import com.lluis.onsou.backend.registration.model.Result;
 import com.udl.lluis.onsou.entities.Device;
@@ -177,6 +175,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         locListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
+                LatLng myPos = new LatLng(location.getLatitude(),location.getLongitude());
+                MyDevice.getInstance().setPosition(myPos);
                 // Send to server new location
                 sendMyPositionTask = new SendMyPositionTask();
                 sendMyPositionTask.execute(location);
@@ -729,24 +729,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         protected Result doInBackground(Location... params) {
             if (regService == null) {
                 Registration.Builder builder;
-                if(false){
-                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(),
-                            new AndroidJsonFactory(), null)
-                            // Need setRootUrl and setGoogleClientRequestInitializer only for local testing,
-                            // otherwise they can be skipped
-                            .setRootUrl("http://192.168.1.4:8080/_ah/api/")
-                            .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
-                                @Override
-                                public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest)
-                                        throws IOException {
-                                    abstractGoogleClientRequest.setDisableGZipContent(true);
-                                }
-                            });
-                    // end of optional local run code
-                }else{
-                    builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
-                            .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
-                }
+
+                builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(), new AndroidJsonFactory(), null)
+                        .setRootUrl("https://tranquil-well-88613.appspot.com/_ah/api/");
+
                 regService = builder.build();
             }
             try {
@@ -797,7 +783,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         @Override
         protected void onPostExecute(Result result) {
             super.onPostExecute(result);
-            sendMyPositionTask = null;
+            getDevicesTask = null;
             if(result.getStatus()){
                 devices.clear();
                 devices = Device.getFromServer((ArrayList)result.getDevices());
@@ -808,7 +794,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
         @Override
         protected void onCancelled() {
-            sendMyPositionTask = null;
+            getDevicesTask = null;
         }
     }
 

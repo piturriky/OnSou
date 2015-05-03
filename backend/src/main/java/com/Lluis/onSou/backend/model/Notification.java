@@ -10,7 +10,7 @@ import com.googlecode.objectify.annotation.Id;
 public class Notification {
 
     @Id
-    private Long Id;
+    private Long id;
 
 
 //    private static HashMap<Integer,String> notificationTypes = new HashMap<Integer,String>(){{
@@ -19,7 +19,7 @@ public class Notification {
 
 
     public Long getId() {
-        return Id;
+        return id;
     }
 
     @Override
@@ -29,13 +29,13 @@ public class Notification {
 
         Notification that = (Notification) o;
 
-        if (!Id.equals(that.Id)) return false;
+        if (!id.equals(that.id)) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        return Id.hashCode();
+        return id.hashCode();
     }
 }

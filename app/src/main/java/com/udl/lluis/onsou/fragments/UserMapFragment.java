@@ -3,6 +3,7 @@ package com.udl.lluis.onsou.fragments;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
@@ -25,9 +26,14 @@ import com.udl.lluis.onsou.FragmentsCommunicationInterface;
 import com.udl.lluis.onsou.R;
 import com.udl.lluis.onsou.entities.Device;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 
 /**
@@ -40,6 +46,8 @@ public class UserMapFragment extends Fragment implements Serializable {
      */
     private static final String ARG_SECTION_NUMBER = "SECTION_TAG";
 
+    private static String URL_BARS = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s&radius=%s&types=%s&sensor=true&key=%s";
+
     //private FragmentActivity context;
     private FragmentsCommunicationInterface mCallback;
 
@@ -51,6 +59,8 @@ public class UserMapFragment extends Fragment implements Serializable {
     private HashMap<Long,Device> devices;
 
     private static UserMapFragment fragment;
+
+    private ShowBarsTask showBarsTask;
 
     /**
      * Returns a new instance of this fragment for the given section
@@ -143,15 +153,33 @@ public class UserMapFragment extends Fragment implements Serializable {
             boolean buildings = myPreference.getBoolean("buildings_map_checkbox",true);
             mMap.setBuildingsEnabled(buildings);
 
+            // Show hospitals
+            boolean hospitals = myPreference.getBoolean("show_hospitals",false);
+
             // Try center map on my device
             Location myLoc = mMap.getMyLocation();
+            LatLng myLatlon;
             if(myLoc != null){
-                centerMapOnPosition(new LatLng(myLoc.getLatitude(),myLoc.getLongitude()));
+                myLatlon = new LatLng(myLoc.getLatitude(),myLoc.getLongitude());
+                centerMapOnPosition(myLatlon);
             }else{
-                LatLng myLatlon = mCallback.getDeviceLocation();
+                myLatlon = mCallback.getDeviceLocation();
                 if(myLatlon != null){
                     centerMapOnPosition(myLatlon);
                 }
+            }
+
+            // Show restaurants
+            boolean bars = myPreference.getBoolean("show_bars",false);
+            if(bars && myLatlon != null){
+                String location = Double.toString(myLatlon.latitude) + "," + Double.toString(myLatlon.longitude);
+                String radius = myPreference.getString("places_dist_list","1");
+                String types = "bar,cafe,food,restaurant";
+                String key = getString(R.string.server_key);
+                String url = String.format(URL_BARS,location,radius,types,key);
+
+                showBarsTask = new ShowBarsTask();
+                showBarsTask.execute(url );
             }
         }
     }
@@ -240,10 +268,82 @@ public class UserMapFragment extends Fragment implements Serializable {
         Toast.makeText(getActivity(), text, Toast.LENGTH_SHORT).show();
     }
 
-    public String getTest(){
-        return "TEESTE";
+
+    private class ShowBarsTask extends AsyncTask<String,Void,String>{
+
+        @Override
+        protected String doInBackground(String... params) {
+
+            try {
+                return makeCall((String) params[0]);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            showBarsTask = null;
+
+            if(result == null){
+
+            }else{
+                ArrayList list = parseJSON(result);
+            }
+
+        }
+
+        @Override
+        protected void onCancelled() {
+            super.onCancelled();
+            showBarsTask = null;
+        }
     }
 
+    private String makeCall(String resourceUrl) throws IOException {
+        InputStream is = null;
 
+        try{
+            URL url = new URL(resourceUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setReadTimeout(10000);
+            conn.setConnectTimeout(15000);
+            conn.setRequestMethod("GET");
+            conn.setDoInput(true);
+
+            conn.connect();
+            int response = conn.getResponseCode();
+
+            is = conn.getInputStream();
+
+            String res = readIt(is);
+            return res;
+        }finally {
+            if(is != null){
+                is.close();
+            }
+        }
+    }
+
+    private String readIt(InputStream is) throws IOException {
+
+//        StringWriter writer = new StringWriter();
+//        IOUtils.copy(is,writer);
+
+        Scanner s = new Scanner(is).useDelimiter("\\A");
+        return s.hasNext() ? s.next() : "";
+
+//        Reader reader = null;
+//        char [] buffer = new char[Integer.MAX_VALUE];
+//        reader.read(buffer);
+//        return new String(buffer);
+    }
+
+    private ArrayList parseJSON(final String response){
+
+        return null;
+    }
 
 }

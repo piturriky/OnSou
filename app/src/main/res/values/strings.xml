@@ -38,6 +38,9 @@
     <!-- NOTIFICATIONS -->
     <string name="addFriend">User %1$s wants to add as friend</string>
 
+    <!-- PREFERENCES -->
+
+
     <string name="cantLogout">Logout error.</string>
     <string name="internal_error">Internal application error</string>
 
