@@ -40,10 +40,12 @@ import com.udl.lluis.onsou.entities.Device;
 import com.udl.lluis.onsou.entities.MyDevice;
 import com.udl.lluis.onsou.fragments.AddDeviceDialogFragment;
 import com.udl.lluis.onsou.fragments.AddGroupDialogFragment;
+import com.udl.lluis.onsou.fragments.DeleteSharedPositionFragment;
 import com.udl.lluis.onsou.fragments.DialogInformation;
 import com.udl.lluis.onsou.fragments.FriendsFragment;
 import com.udl.lluis.onsou.fragments.GroupsFragment;
 import com.udl.lluis.onsou.fragments.ManageFriendsDialogFragment;
+import com.udl.lluis.onsou.fragments.SharePositionFragment;
 import com.udl.lluis.onsou.fragments.UserMapFragment;
 
 import java.io.IOException;
@@ -294,6 +296,16 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 DialogInformation e = new DialogInformation();
                 e.setArguments(bundle);
                 e.show(getSupportFragmentManager(),"DialogInformation");
+                break;
+            case 6:// Share Position
+                SharePositionFragment s = new SharePositionFragment();
+                s.setArguments(bundle);
+                s.show(getSupportFragmentManager(),"ShareInformation");
+                break;
+            case 7: // Delete Shared Position
+                DeleteSharedPositionFragment p = new DeleteSharedPositionFragment();
+                p.setArguments(bundle);
+                p.show(getSupportFragmentManager(),"DeleteSharedPosition");
                 break;
         }
     }

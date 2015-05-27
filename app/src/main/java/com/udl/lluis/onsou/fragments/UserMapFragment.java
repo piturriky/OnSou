@@ -26,6 +26,7 @@ import com.udl.lluis.onsou.FragmentsCommunicationInterface;
 import com.udl.lluis.onsou.Globals;
 import com.udl.lluis.onsou.R;
 import com.udl.lluis.onsou.entities.Device;
+import com.udl.lluis.onsou.entities.MyDevice;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -54,10 +55,12 @@ public class UserMapFragment extends Fragment implements Serializable {
 
     private HashMap<Long,Device> devices;
     private ArrayList<Place> placesList;
+    private ArrayList<Place> sharedPlacesList;
 
     private static UserMapFragment fragment;
 
     private ShowBarsTask showBarsTask;
+    private ShowSharedLocationsTask showSharedLocationsTask;
 
     /**
      * Returns a new instance of this fragment for the given section
@@ -84,6 +87,7 @@ public class UserMapFragment extends Fragment implements Serializable {
         myPreference = PreferenceManager.getDefaultSharedPreferences(getActivity());
         devices = new HashMap<Long,Device>();
         placesList = new ArrayList<Place>();
+        sharedPlacesList = new ArrayList<Place>();
     }
 
     @Override
@@ -152,6 +156,32 @@ public class UserMapFragment extends Fragment implements Serializable {
             boolean buildings = myPreference.getBoolean("buildings_map_checkbox",true);
             mMap.setBuildingsEnabled(buildings);
 
+            mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+                @Override
+                public void onMapLongClick(LatLng latLng) {
+                    Bundle bundle = new Bundle();
+                    bundle.putSerializable("latitude",latLng.latitude);
+                    bundle.putSerializable("longitude",latLng.longitude);
+                    mCallback.showDialogFragment(6,bundle);
+                }
+            });
+
+            mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+                @Override
+                public void onMapClick(LatLng latLng) {
+                    for(Place place : sharedPlacesList) {
+                        if(place.getOwnerId() != MyDevice.getInstance().getId()) continue;
+                        if(Math.abs(place.getLatitude() - latLng.latitude) < 0.05 && Math.abs(place.getLongitude() - latLng.longitude) < 0.05) {
+                            Bundle bundle = new Bundle();
+                            bundle.putSerializable("markerName",place.getName());
+                            bundle.putSerializable("markerId",place.getId());
+                            mCallback.showDialogFragment(7,bundle);
+                            break;
+                        }
+                    }
+                }
+            });
+
             // Try center map on my device
             Location myLoc = mMap.getMyLocation();
             LatLng myLatlon;
@@ -163,6 +193,15 @@ public class UserMapFragment extends Fragment implements Serializable {
                 if(myLatlon != null){
                     centerMapOnPosition(myLatlon);
                 }
+            }
+
+            // Show shared locations
+            boolean locations = myPreference.getBoolean("show_shared_locations",true);
+            sharedPlacesList.clear();
+            if(locations && myLatlon != null){
+                String url = "http://192.168.1.24:3000/locations";
+                showSharedLocationsTask = new ShowSharedLocationsTask();
+                showSharedLocationsTask.execute(url);
             }
 
             // Show restaurants
@@ -259,6 +298,7 @@ public class UserMapFragment extends Fragment implements Serializable {
                 }*/
             }
             showPlaces();
+            showSharedPlaces();
         }
     }
 
@@ -273,6 +313,21 @@ public class UserMapFragment extends Fragment implements Serializable {
             }else{
                 marker.title(getString(R.string.cafe))
                         .icon(BitmapDescriptorFactory.fromResource(R.drawable.restaurant));
+            }
+            mMap.addMarker(marker);
+        }
+    }
+
+    private void showSharedPlaces(){
+        for(Place place : sharedPlacesList){
+            MarkerOptions marker = new MarkerOptions()
+                    .position(new LatLng(place.getLatitude(),place.getLongitude()))
+                    .snippet(place.getOwnerId().toString())
+                    .title(place.getName());
+            if(place.getOwnerId() == MyDevice.getInstance().getId()){
+                marker.icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_star_blue));
+            }else{
+                marker.icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_star));
             }
             mMap.addMarker(marker);
         }
@@ -314,6 +369,41 @@ public class UserMapFragment extends Fragment implements Serializable {
         protected void onCancelled() {
             super.onCancelled();
             showBarsTask = null;
+        }
+    }
+
+    private class ShowSharedLocationsTask extends AsyncTask<String,Void,String>{
+
+        @Override
+        protected String doInBackground(String... params) {
+
+            try {
+                return makeCall((String) params[0]);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            showSharedLocationsTask = null;
+
+            if(result == null){
+
+            }else{
+                Log.e(Globals.TAG, result);
+                sharedPlacesList = parseJSON(result);
+                showSharedPlaces();
+            }
+
+        }
+
+        @Override
+        protected void onCancelled() {
+            super.onCancelled();
+            showSharedLocationsTask = null;
         }
     }
 
@@ -380,6 +470,29 @@ public class UserMapFragment extends Fragment implements Serializable {
                         temp.add(place);
                     }
                 }
+            }else if(jsonObject.has("locations")){
+                JSONArray jsonArray = jsonObject.getJSONArray("locations");
+                for(int i = 0; i < jsonArray.length(); i++){
+                    Place place = new Place();
+                    if(jsonArray.getJSONObject(i).has("name")){
+                        place.setName(jsonArray.getJSONObject(i).optString("name"));
+                    }
+                    if(jsonArray.getJSONObject(i).has("latitude")){
+                        place.setLatitude(jsonArray.getJSONObject(i).optDouble("latitude"));
+                    }
+                    if(jsonArray.getJSONObject(i).has("longitude")){
+                        place.setLatitude(jsonArray.getJSONObject(i).optDouble("longitude"));
+                    }
+                    if(jsonArray.getJSONObject(i).has("locId")){
+                        place.setId(jsonArray.getJSONObject(i).optLong("locId"));
+                    }
+                    if(jsonArray.getJSONObject(i).has("ownerId")){
+                        place.setOwnerId(jsonArray.getJSONObject(i).optLong("ownerId"));
+                    }
+                    if(place.isComplete_()){
+                        temp.add(place);
+                    }
+                }
             }
         }catch (Exception e){
             return new ArrayList<>();
@@ -391,6 +504,9 @@ public class UserMapFragment extends Fragment implements Serializable {
         String name;
         Double latitude;
         Double longitude;
+
+        Long id;
+        Long ownerId;
 
         ArrayList <String> types = new ArrayList<>();
 
@@ -431,8 +547,28 @@ public class UserMapFragment extends Fragment implements Serializable {
             types.add(s);
         }
 
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
+
+        public Long getOwnerId() {
+            return ownerId;
+        }
+
+        public void setOwnerId(Long ownerId) {
+            this.ownerId = ownerId;
+        }
+
         public boolean isComplete(){
             return this.name != null && !this.name.isEmpty() && !this.types.isEmpty() && this.latitude != null && this.longitude != null;
+        }
+
+        public boolean isComplete_(){
+            return this.name != null && !this.name.isEmpty() && this.id != null && this.ownerId != null && this.latitude != null && this.longitude != null;
         }
     }
 }

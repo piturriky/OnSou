@@ -8,6 +8,7 @@
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="ok">Ok</string>
+    <string name="share">Share</string>
 
     <!-- ACTION BAR -->
     <string name="action_settings">Settings</string>
@@ -30,6 +31,8 @@
     <string name="addDevice">Add User Friend</string>
     <string name="username">Username</string>
     <string name="groupname">Group name</string>
+    <string name="positionname">Position name</string>
+    <string name="deletePositionMessage">Are you sure to want to delete your shared location "%1$s"?</string>
 
     <!-- FRIENDS TAB -->
     <string name="online">On-Line</string>
