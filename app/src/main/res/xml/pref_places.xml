@@ -13,6 +13,10 @@
         android:key="show_bars"
         android:title="@string/show_bars"
         android:defaultValue="false" />
+    <CheckBoxPreference
+        android:key="show_shared_locations"
+        android:title="@string/show_shared_positions"
+        android:defaultValue="false" />
     <!--<CheckBoxPreference-->
         <!--android:key="show_hospitals"-->
         <!--android:title="@string/show_hospital"-->

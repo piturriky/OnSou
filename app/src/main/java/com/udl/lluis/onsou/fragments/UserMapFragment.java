@@ -159,6 +159,17 @@ public class UserMapFragment extends Fragment implements Serializable {
             mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
                 @Override
                 public void onMapLongClick(LatLng latLng) {
+                    for(Place place : sharedPlacesList) {
+                        if(place.getOwnerId() != MyDevice.getInstance().getId()) continue;
+                        if(Math.abs(place.getLatitude() - latLng.latitude) < 0.0001 && Math.abs(place.getLongitude() - latLng.longitude) < 0.0001) {
+                            Bundle bundle = new Bundle();
+                            bundle.putSerializable("markerName",place.getName());
+                            bundle.putSerializable("markerId",place.getId());
+                            //Log.e(Globals.TAG, "markerId"+Long.toString(place.getId()));
+                            mCallback.showDialogFragment(7,bundle);
+                            return;
+                        }
+                    }
                     Bundle bundle = new Bundle();
                     bundle.putSerializable("latitude",latLng.latitude);
                     bundle.putSerializable("longitude",latLng.longitude);
@@ -169,16 +180,7 @@ public class UserMapFragment extends Fragment implements Serializable {
             mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
                 @Override
                 public void onMapClick(LatLng latLng) {
-                    for(Place place : sharedPlacesList) {
-                        if(place.getOwnerId() != MyDevice.getInstance().getId()) continue;
-                        if(Math.abs(place.getLatitude() - latLng.latitude) < 0.05 && Math.abs(place.getLongitude() - latLng.longitude) < 0.05) {
-                            Bundle bundle = new Bundle();
-                            bundle.putSerializable("markerName",place.getName());
-                            bundle.putSerializable("markerId",place.getId());
-                            mCallback.showDialogFragment(7,bundle);
-                            break;
-                        }
-                    }
+
                 }
             });
 
@@ -196,9 +198,9 @@ public class UserMapFragment extends Fragment implements Serializable {
             }
 
             // Show shared locations
-            boolean locations = myPreference.getBoolean("show_shared_locations",true);
+            boolean locations = myPreference.getBoolean("show_shared_locations",false);
             sharedPlacesList.clear();
-            if(locations && myLatlon != null){
+            if(locations){
                 String url = "http://192.168.1.24:3000/locations";
                 showSharedLocationsTask = new ShowSharedLocationsTask();
                 showSharedLocationsTask.execute(url);
@@ -322,12 +324,12 @@ public class UserMapFragment extends Fragment implements Serializable {
         for(Place place : sharedPlacesList){
             MarkerOptions marker = new MarkerOptions()
                     .position(new LatLng(place.getLatitude(),place.getLongitude()))
-                    .snippet(place.getOwnerId().toString())
-                    .title(place.getName());
+                    .snippet(place.getName())
+                    .title(getString(R.string.sharedL));
             if(place.getOwnerId() == MyDevice.getInstance().getId()){
-                marker.icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_star_blue));
+                marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.blue_star));
             }else{
-                marker.icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_star));
+                marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.star));
             }
             mMap.addMarker(marker);
         }
@@ -416,6 +418,7 @@ public class UserMapFragment extends Fragment implements Serializable {
             conn.setReadTimeout(10000);
             conn.setConnectTimeout(15000);
             conn.setRequestMethod("GET");
+            conn.setRequestProperty("Content-Type","application/json");
             conn.setDoInput(true);
 
             conn.connect();
@@ -471,8 +474,10 @@ public class UserMapFragment extends Fragment implements Serializable {
                     }
                 }
             }else if(jsonObject.has("locations")){
+
                 JSONArray jsonArray = jsonObject.getJSONArray("locations");
                 for(int i = 0; i < jsonArray.length(); i++){
+
                     Place place = new Place();
                     if(jsonArray.getJSONObject(i).has("name")){
                         place.setName(jsonArray.getJSONObject(i).optString("name"));
@@ -481,10 +486,11 @@ public class UserMapFragment extends Fragment implements Serializable {
                         place.setLatitude(jsonArray.getJSONObject(i).optDouble("latitude"));
                     }
                     if(jsonArray.getJSONObject(i).has("longitude")){
-                        place.setLatitude(jsonArray.getJSONObject(i).optDouble("longitude"));
+                        place.setLongitude(jsonArray.getJSONObject(i).optDouble("longitude"));
                     }
-                    if(jsonArray.getJSONObject(i).has("locId")){
-                        place.setId(jsonArray.getJSONObject(i).optLong("locId"));
+                    if(jsonArray.getJSONObject(i).has("_id")){
+                        place.setId(jsonArray.getJSONObject(i).optString("_id"));
+                        Log.e(Globals.TAG, Long.toString(jsonArray.getJSONObject(i).optLong("_id")));
                     }
                     if(jsonArray.getJSONObject(i).has("ownerId")){
                         place.setOwnerId(jsonArray.getJSONObject(i).optLong("ownerId"));
@@ -505,7 +511,7 @@ public class UserMapFragment extends Fragment implements Serializable {
         Double latitude;
         Double longitude;
 
-        Long id;
+        String id;
         Long ownerId;
 
         ArrayList <String> types = new ArrayList<>();
@@ -547,11 +553,11 @@ public class UserMapFragment extends Fragment implements Serializable {
             types.add(s);
         }
 
-        public Long getId() {
+        public String getId() {
             return id;
         }
 
-        public void setId(Long id) {
+        public void setId(String id) {
             this.id = id;
         }
 

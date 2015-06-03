@@ -34,7 +34,17 @@ import com.lluis.onsou.backend.registration.Registration;
 import com.lluis.onsou.backend.registration.model.Result;
 import com.udl.lluis.onsou.entities.MyDevice;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -54,6 +64,7 @@ public class LoginActivity extends Activity{
      */
     private UserLoginTask mAuthTask = null;
     private GcmRegistrationAsyncTask mGCMRegistrationTask = null;
+    private NodeJSServerRegistration mNodeJSServerRegistration = null;
 
     // UI references.
     private EditText mUserNamelView;
@@ -281,16 +292,20 @@ public class LoginActivity extends Activity{
         @Override
         protected void onPostExecute(final Result result) {
             mAuthTask = null;
-            showProgress(false);
 
             if (result.getStatus()) {
                 device = (com.lluis.onsou.backend.registration.model.Device)result.getDevice();
                 MyDevice.getInstance().setId(device.getId());
                 MyDevice.getInstance().setName(device.getUsername());
                 MyDevice.getInstance().setOnline(device.getOnline());
+                if(type == "register"){
+                    mNodeJSServerRegistration = new NodeJSServerRegistration();
+                    mNodeJSServerRegistration.execute( mUserName, mPassword, Long.toString(MyDevice.getInstance().getId()));
+                }
                 mGCMRegistrationTask = new GcmRegistrationAsyncTask(getApplicationContext(), mUserName, mPassword);
                 mGCMRegistrationTask.execute((Void)null);
             } else {
+                showProgress(false);
                 switch(result.getErrorType()){
                     case 1:
                     case 3:
@@ -311,6 +326,90 @@ public class LoginActivity extends Activity{
             mAuthTask = null;
             showProgress(false);
         }
+    }
+
+    private class NodeJSServerRegistration extends AsyncTask<String,  Void, String> {
+        //http://hmkcode.com/android-send-json-data-to-server/
+        String s_url = "http://192.168.1.24:3000/register";
+
+        @Override
+        protected String doInBackground(String... params) {
+            InputStream inputStream = null;
+            String result = "";
+            try {
+
+                // 1. create HttpClient
+                HttpClient httpclient = new DefaultHttpClient();
+
+                // 2. make POST request to the given URL
+                HttpPost httpPost = new HttpPost(s_url);
+
+                String json = "";
+
+                // 3. build jsonObject
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.accumulate("username", (String) params[0]);
+                jsonObject.accumulate("password", (String) params[1]);
+                jsonObject.accumulate("id", (String) params[2]);
+
+                // 4. convert JSONObject to JSON to String
+                json = jsonObject.toString();
+
+                // 5. set json to StringEntity
+                StringEntity se = new StringEntity(json);
+
+                // 6. set httpPost Entity
+                httpPost.setEntity(se);
+
+                // 7. Set some headers to inform server about the type of the content
+                httpPost.setHeader("Accept", "application/json");
+                httpPost.setHeader("Content-type", "application/json");
+
+                // 8. Execute POST request to the given URL
+                HttpResponse httpResponse = httpclient.execute(httpPost);
+
+                // 9. receive response as inputStream
+                inputStream = httpResponse.getEntity().getContent();
+
+                // 10. convert inputstream to string
+                if(inputStream != null)
+                    result = convertInputStreamToString(inputStream);
+                else
+                    result = "Did not work!";
+
+            } catch (Exception e) {
+                Log.d("InputStream", e.getLocalizedMessage());
+            }
+
+            // 11. return result
+            return result;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+
+            Log.e(Globals.TAG, result);
+
+        }
+
+        @Override
+        protected void onCancelled() {
+            mNodeJSServerRegistration = null;
+            super.onCancelled();
+        }
+    }
+
+    private static String convertInputStreamToString(InputStream inputStream) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+        String line = "";
+        String result = "";
+        while((line = bufferedReader.readLine()) != null)
+            result += line;
+
+        inputStream.close();
+        return result;
+
     }
 
     private class GcmRegistrationAsyncTask extends AsyncTask<Void, Void, Boolean> {

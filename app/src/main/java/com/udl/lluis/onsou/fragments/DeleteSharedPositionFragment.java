@@ -24,7 +24,7 @@ import java.net.URL;
 public class DeleteSharedPositionFragment extends DialogFragment {
 
     private String message;
-    private Long id;
+    private String idLocation;
 
     private String senderNotification;
 
@@ -64,7 +64,7 @@ public class DeleteSharedPositionFragment extends DialogFragment {
         LayoutInflater inflater = getActivity().getLayoutInflater();
 
         message = String.format(getString(R.string.deletePositionMessage),(String) getArguments().getSerializable("markerName"));
-        id = (Long) getArguments().getSerializable("markerId");
+        idLocation = (String) getArguments().getSerializable("markerId");
 
 
         // Inflate and set the layout for the dialog
@@ -76,7 +76,7 @@ public class DeleteSharedPositionFragment extends DialogFragment {
                 public void onClick(DialogInterface dialog, int id) {
                     mListener.onDialogPositiveClick(DeleteSharedPositionFragment.this);
                     communicationServerTask = new CommunicationServerTask();
-                    communicationServerTask.execute(Long.toString(id));
+                    communicationServerTask.execute(idLocation);
                 }
             })
             .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
@@ -97,17 +97,19 @@ public class DeleteSharedPositionFragment extends DialogFragment {
         @Override
         protected Boolean doInBackground(String... params) {
             try {
-                URL url = new URL(s_url+(String)params[0]);
+                String url_ = s_url+(String)params[0]+"/delete";
+                Log.e(Globals.TAG, url_);
+                URL url = new URL(url_);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("DELETE");
-                //conn.setReadTimeout(10000);
-                //conn.setConnectTimeout(15000);
-                //conn.setDoInput(true);
-                conn.setDoOutput(true);
-                conn.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+                conn.setReadTimeout(10000);
+                conn.setConnectTimeout(15000);
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Content-Type","application/json");
+                conn.setDoInput(true);
 
-                //conn.connect();
-                Log.e(Globals.TAG, Integer.toString(conn.getResponseCode()));
+                conn.connect();
+                int response = conn.getResponseCode();
+                Log.e(Globals.TAG,"response" + Integer.toString(response));
 
             }catch (IOException e){
                 return false;

@@ -32,7 +32,8 @@
     <string name="username">Username</string>
     <string name="groupname">Group name</string>
     <string name="positionname">Position name</string>
-    <string name="deletePositionMessage">Are you sure to want to delete your shared location "%1$s"?</string>
+    <string name="deletePositionMessage">Are you sure to want to delete your shared location \"%1$s\"?</string>
+    <string name="sharedL">Shared location:</string>
 
     <!-- FRIENDS TAB -->
     <string name="online">On-Line</string>
